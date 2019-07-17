@@ -11,9 +11,29 @@ Can you detect fraud from customer transactions ?
 ## Set up conda environment
 
 ```
-conda create -n analytics python=3.6
-conda activate analytics
+conda create -n ieee-fraud-detection python=3.6
+conda activate ieee-fraud-detection
 pip install -r requirements.txt
+```
+
+To move beyond notebook prototyping, all reusable code should go into the `src/` folder package. To use that package inside your project, install the project's module in editable mode, so you can edit files in the `src/` folder and use the modules inside your notebooks :
+
+```
+pip install --editable .
+```
+
+To use the module inside your notebooks, add `%autoreload` at the top of your notebook :
+
+```
+%load_ext autoreload
+%autoreload 2
+```
+
+Example of module usage :
+
+```py
+from src.dataset.make_dataset import generate
+generate(10)
 ```
 
 ## Kaggle API credentials
@@ -24,6 +44,12 @@ For your security, ensure that other users of your computer do not have read acc
 
 `chmod 600 ~/.kaggle/kaggle.json`
 
+## Submit to Kaggle
+
+```
+kaggle competitions submit -c ieee-fraud-detection -f data/submissions/sample_submission.csv -m "My submission message"
+```
+
 # Project organization
 
     ├── tasks.py           <- Invoke with commands like `notebook`
@@ -32,6 +58,7 @@ For your security, ensure that other users of your computer do not have read acc
     │   ├── external       <- Data from third party sources.
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
+    │   ├── submissions    <- All predictions to reuse
     │   └── raw            <- The original, immutable data dump.
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
@@ -45,12 +72,12 @@ For your security, ensure that other users of your computer do not have read acc
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures        <- Generated graphics and figures to be used in reporting
     │
-    ├── environment.yml    <- The requirements file for reproducing the analysis environment
+    ├── requirements.txt   <- The requirements file for reproducing the analysis environment
     │
     └── src                <- Source code for use in this project.
         ├── __init__.py    <- Makes src a Python module
         │
-        ├── data           <- Scripts to download or generate data
+        ├── dataset        <- Scripts to download or generate data
         │   └── make_dataset.py
         │
         ├── features       <- Scripts to turn raw data into features for modeling
