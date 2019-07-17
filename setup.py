@@ -23,5 +23,5 @@ setup(
     author_email='andfanilo@gmail.com',
     description='IEEE Fraud Detection Kaggle challenge',
     python_requires='>=3',
-    long_description=readme(),
+    long_description=readme()
 )

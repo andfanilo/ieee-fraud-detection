@@ -50,6 +50,22 @@ For your security, ensure that other users of your computer do not have read acc
 kaggle competitions submit -c ieee-fraud-detection -f data/submissions/sample_submission.csv -m "My submission message"
 ```
 
+# Quick Python lines
+
+In a Python kernel in Jupyter
+
+Rebuild dataset in interim :
+
+```py
+from src.dataset.make_dataset import Dataset
+ds = Dataset()
+ds.load_raw()
+ds.save_dataset()
+
+ds.load_raw(nrows_train=1000, load_test=False)
+ds.save_dataset(version="_1000", save_test=False)
+```
+
 # Project organization
 
     ├── tasks.py           <- Invoke with commands like `notebook`
