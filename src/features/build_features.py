@@ -21,7 +21,9 @@ def label_encode(ds):
     """
     
     for f in ds.X_train.columns:
+        ds.X_train.fillna(-999, inplace=True)
         if ds.test_loaded:
+            ds.X_test.fillna(-999, inplace=True)
             if ds.X_train[f].dtype == "object" or ds.X_test[f].dtype == "object":
                 lbl = preprocessing.LabelEncoder()
                 lbl.fit(list(ds.X_train[f].values) + list(ds.X_test[f].values))

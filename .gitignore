@@ -63,6 +63,7 @@ target/
 
 # exclude data from source control by default
 data/
+models/
 
 # ipynb checkpoints
 .ipynb_checkpoints

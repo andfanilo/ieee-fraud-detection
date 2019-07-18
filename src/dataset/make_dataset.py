@@ -12,6 +12,7 @@ class Dataset:
         self.X_train = None
         self.X_test = None
         self.y_train = None
+        self.sample_submission = None
         
         self.test_loaded = False
 
@@ -26,6 +27,9 @@ class Dataset:
 
         self.identity_cols_categorical = ["id_12","id_13","id_14","id_15","id_16","id_17","id_18","id_19","id_20","id_21","id_22","id_23","id_24","id_25","id_26","id_27","id_28","id_29","id_30","id_31","id_32","id_33","id_34","id_35","id_36","id_37","id_38","DeviceType","DeviceInfo"]
         self.transaction_cols_categorical = ["ProductCD","card1","card2","card3","card4","card5","card6","addr1","addr2","P_emaildomain","R_emaildomain","M1","M2","M3","M4","M5","M6","M7","M8","M9"]
+
+    def get_categorical_cols(self):
+        return self.identity_cols_categorical + self.transaction_cols_categorical
 
     def load_dataset(self, version='', load_test=True):
         self.X_train = pd.read_parquet(self.interim_folder / f'X_train{version}.parquet')
@@ -102,8 +106,8 @@ class Dataset:
         start_mem_usg = df.memory_usage().sum() / 1024 ** 2
         print("Memory usage of properties dataframe is :", start_mem_usg, " MB")
         NAlist = []  # Keeps track of columns that have missing values filled in.
-        cat_cols = self.identity_cols_categorical + self.transaction_cols_categorical
-        
+        cat_cols = self.get_categorical_cols()
+
         for col in df.columns:
             # Print current column type
             print("******************************")
