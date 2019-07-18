@@ -92,19 +92,25 @@ class Dataset:
 
     def __reduce_mem_usage(self, df):
         """
+        Reducing Memory Size of dataset
+        
         From https://www.kaggle.com/mjbahmani/reducing-memory-size-for-ieee
         Based on this great kernel https://www.kaggle.com/arjanso/reducing-dataframe-memory-size-by-65
-        Reducing Memory Size of dataset
+        
+        Also https://www.dataquest.io/blog/pandas-big-data/
         """
         start_mem_usg = df.memory_usage().sum() / 1024 ** 2
         print("Memory usage of properties dataframe is :", start_mem_usg, " MB")
         NAlist = []  # Keeps track of columns that have missing values filled in.
+        cat_cols = self.identity_cols_categorical + self.transaction_cols_categorical
+        
         for col in df.columns:
+            # Print current column type
+            print("******************************")
+            print("Column: ", col)
+            print("dtype before: ", df[col].dtype)
+
             if df[col].dtype != object:  # Exclude strings
-                # Print current column type
-                #print("******************************")
-                #print("Column: ", col)
-                #print("dtype before: ", df[col].dtype)
                 # make variables for Int, max and min
                 IsInt = False
                 mx = df[col].max()
@@ -150,9 +156,24 @@ class Dataset:
                 else:
                     df[col] = df[col].astype(np.float32)
 
-                # Print new column type
-                #print("dtype after: ", df[col].dtype)
-                #print("******************************")
+                # Reput NaN where we have mn - 1 in column
+                df[col] = df[col].replace({mn - 1: np.nan})
+
+            # Work on strings to categorical if number of unique values is less than 50%
+            if df[col].dtype == object:
+                num_unique_values = len(df[col].unique())
+                num_total_values = len(df[col])
+                if num_unique_values / num_total_values < 0.5:
+                    df[col] = df[col].astype('category')
+
+            # we also know all categorical columns already xD
+            if col in cat_cols:
+                df[col] = df[col].astype('category')
+
+            # Print new column type
+            print("dtype after: ", df[col].dtype)
+            print("******************************")
+
         # Print final result
         print("___MEMORY USAGE AFTER COMPLETION:___")
         mem_usg = df.memory_usage().sum() / 1024 ** 2
@@ -161,11 +182,12 @@ class Dataset:
         print("_________________")
         print("")
         print(
-            "Warning: the following columns have missing values filled with 'df['column_name'].min() -1': "
+            "Warning: the following numeric columns have missing values"
         )
         print("_________________")
         print("")
         print(NAlist)
         print("")
+
         return df
 
