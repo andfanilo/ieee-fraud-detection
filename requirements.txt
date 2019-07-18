@@ -22,4 +22,5 @@ seaborn
 snakeviz
 shap
 statsmodels
+vega
 xgboost

@@ -12,6 +12,8 @@ class Dataset:
         self.X_train = None
         self.X_test = None
         self.y_train = None
+        
+        self.test_loaded = False
 
         root_folder = Path("../../data")
         self.raw_folder = root_folder / "raw"
@@ -30,6 +32,7 @@ class Dataset:
         self.y_train = np.load(self.interim_folder / f'y_train{version}.npy')
         if load_test:
             self.X_test = pd.read_parquet(self.interim_folder / f'X_test{version}.parquet')
+            self.test_loaded = True
 
     def load_raw(self, nrows_train=None, load_test=True):
         """
@@ -75,6 +78,7 @@ class Dataset:
             del test_transaction, test_identity
             self.X_test = test.copy()
             del test
+            self.test_loaded = True
 
         self.sample_submission = pd.read_csv(
             self.submissions_folder / "sample_submission.csv", index_col="TransactionID"
