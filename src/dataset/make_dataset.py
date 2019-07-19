@@ -2,6 +2,7 @@ from path import Path
 
 import numpy as np
 import pandas as pd
+pd.options.display.max_columns = None
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -29,11 +30,17 @@ class Dataset:
         self.transaction_cols_categorical = ["ProductCD","card1","card2","card3","card4","card5","card6","addr1","addr2","P_emaildomain","R_emaildomain","M1","M2","M3","M4","M5","M6","M7","M8","M9"]
 
     def get_categorical_cols(self):
+        """
+        Returns the set of predefined categorical columns
+        """
         return self.identity_cols_categorical + self.transaction_cols_categorical
 
     def load_dataset(self, version='', load_test=True):
         self.X_train = pd.read_parquet(self.interim_folder / f'X_train{version}.parquet')
         self.y_train = np.load(self.interim_folder / f'y_train{version}.npy')
+        self.sample_submission = pd.read_csv(
+            self.submissions_folder / "sample_submission.csv", index_col="TransactionID"
+        )
         if load_test:
             self.X_test = pd.read_parquet(self.interim_folder / f'X_test{version}.parquet')
             self.test_loaded = True

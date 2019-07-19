@@ -27,3 +27,10 @@ The `TransactionDT` feature is a timedelta from a given reference datetime (not 
 - **train\_{transaction, identity}.csv** - the training set
 - **test\_{transaction, identity}.csv** - the test set (you must predict the isFraud value for these observations)
 - **sample_submission.csv** - a sample submission file in the correct format
+
+## Info from discussion
+
+[link to discussion](https://www.kaggle.com/c/ieee-fraud-detection/discussion/100304)
+
+- We define reported chargeback on card, user account, associated email address and transactions directly linked to these attributes as fraud transaction (isFraud=1); If none of above is found after 120 days, then we define as legit (isFraud=0). This is applied to both train and test. The date time for provided dataset is long enough from now to believe that label is reliable.
+- These payments are from different countries, including North America, Latin America, Europe. But TransactionAmt has been converted to USD.

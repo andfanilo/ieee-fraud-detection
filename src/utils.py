@@ -4,7 +4,6 @@ from gc import get_referents
 
 from IPython.display import Markdown, display
 
-import pandas as pd
 
 def getsize(obj):
     """sum size of object & members."""
@@ -27,13 +26,6 @@ def getsize(obj):
                 need_referents.append(obj)
         objects = get_referents(*need_referents)
     return size
-
-
-def get_all_dataframe(ds):
-    """
-    Return X_train and X_test concatenated
-    """
-    return pd.concat([ds.X_train, ds.X_test], axis = 0, sort = False)
 
 
 def printmd(string):
