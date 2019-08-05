@@ -19,8 +19,10 @@ class TreeVisualizer:
         self.shap_values = self.explainer.shap_values(self.X)
 
         if interactions:
-            self.interactions=True
-            self.shap_interaction_values = self.explainer.shap_interaction_values(self.X)
+            self.interactions = True
+            self.shap_interaction_values = self.explainer.shap_interaction_values(
+                self.X
+            )
 
     def get_importances(self):
         """
@@ -28,8 +30,8 @@ class TreeVisualizer:
         """
         shap_sum = np.abs(self.shap_values).mean(axis=0)
         importance_df = pd.DataFrame([self.X.columns.tolist(), shap_sum.tolist()]).T
-        importance_df.columns = ['column_name', 'shap_importance']
-        importance_df = importance_df.sort_values('shap_importance', ascending=False)
+        importance_df.columns = ["column_name", "shap_importance"]
+        importance_df = importance_df.sort_values("shap_importance", ascending=False)
         return importance_df
 
     def get_interaction_importances(self):
@@ -44,13 +46,23 @@ class TreeVisualizer:
         """
         tmp = np.abs(self.shap_interaction_values).sum(0)
         for i in range(tmp.shape[0]):
-            tmp[i,i] = 0
+            tmp[i, i] = 0
         inds = np.argsort(-tmp.sum(0))[:50]
-        tmp2 = tmp[inds,:][:,inds]
-        pl.figure(figsize=(12,12))
+        tmp2 = tmp[inds, :][:, inds]
+        pl.figure(figsize=(12, 12))
         pl.imshow(tmp2)
-        pl.yticks(range(tmp2.shape[0]), self.X.columns[inds], rotation=50.4, horizontalalignment="right")
-        pl.xticks(range(tmp2.shape[0]), self.X.columns[inds], rotation=50.4, horizontalalignment="left")
+        pl.yticks(
+            range(tmp2.shape[0]),
+            self.X.columns[inds],
+            rotation=50.4,
+            horizontalalignment="right",
+        )
+        pl.xticks(
+            range(tmp2.shape[0]),
+            self.X.columns[inds],
+            rotation=50.4,
+            horizontalalignment="left",
+        )
         pl.gca().xaxis.tick_top()
         pl.show()
 

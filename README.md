@@ -38,6 +38,12 @@ Options:
   --help                 Show this message and exit.
 ```
 
+## Format with Black
+
+```
+black src/
+```
+
 ## Kaggle API credentials
 
 To use the [Kaggle client library](https://github.com/Kaggle/kaggle-api), sign up for a Kaggle account at https://www.kaggle.com. Then go to the 'Account' tab of your user profile (`https://www.kaggle.com/<username>/account`) and select 'Create API Token'. This will trigger the download of `kaggle.json`, a file containing your API credentials. Place this file in the location `~/.kaggle/kaggle.json` (on Windows in the location `C:\Users\<Windows-username>\.kaggle\kaggle.json`).

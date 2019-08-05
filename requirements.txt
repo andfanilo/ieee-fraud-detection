@@ -10,6 +10,7 @@ lightgbm
 line-profiler
 missingno
 mlflow
+numba
 numpy
 orderedmultidict
 pandas
@@ -23,6 +24,7 @@ seaborn
 snakeviz
 shap
 statsmodels
+tqdm
 umap-learn
 vega
 xgboost

@@ -67,3 +67,5 @@ models/
 
 # ipynb checkpoints
 .ipynb_checkpoints
+
+.vscode
