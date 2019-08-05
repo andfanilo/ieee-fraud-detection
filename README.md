@@ -22,18 +22,20 @@ To move beyond notebook prototyping, all reusable code should go into the `src/`
 pip install --editable .
 ```
 
-To use the module inside your notebooks, add `%autoreload` at the top of your notebook :
+Then launch jupyter notebook with `jupyter notebook` or lab with `jupyter lab`.
+
+## Run scripts
+
+Run full pipeline : `run_experiment --nrows_train 1000 --name test`
 
 ```
-%load_ext autoreload
-%autoreload 2
-```
+(ieee-fraud-detection) λ run_experiment --help
+Usage: run_experiment [OPTIONS]
 
-Example of module usage :
-
-```py
-from src.dataset.make_dataset import generate
-generate(10)
+Options:
+  --nrows_train INTEGER  Number of training rows
+  --name TEXT            Submission name
+  --help                 Show this message and exit.
 ```
 
 ## Kaggle API credentials
@@ -68,7 +70,6 @@ ds.save_dataset(version="_1000", save_test=False)
 
 # Project organization
 
-    ├── tasks.py           <- Invoke with commands like `notebook`
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
     │   ├── external       <- Data from third party sources.
@@ -92,6 +93,8 @@ ds.save_dataset(version="_1000", save_test=False)
     │
     └── src                <- Source code for use in this project.
         ├── __init__.py    <- Makes src a Python module
+        |
+        ├── app.py         <- Main entry point
         │
         ├── dataset        <- Scripts to download or generate data
         │   └── make_dataset.py

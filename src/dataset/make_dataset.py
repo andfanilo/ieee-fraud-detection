@@ -7,6 +7,7 @@ pd.options.display.max_columns = None
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from src.utils import get_root_dir
 
 class Dataset:
     def __init__(self):
@@ -17,7 +18,7 @@ class Dataset:
         
         self.test_loaded = False
 
-        root_folder = Path("../../data")
+        root_folder = get_root_dir() / "data"
         self.raw_folder = root_folder / "raw"
         self.interim_folder = root_folder / "interim"
         self.processed_folder = root_folder / "processed"
@@ -169,17 +170,6 @@ class Dataset:
 
                 # Reput NaN where we have mn - 1 in column
                 df[col] = df[col].replace({mn - 1: np.nan})
-
-            # Work on strings to categorical if number of unique values is less than 50%
-            if df[col].dtype == object:
-                num_unique_values = len(df[col].unique())
-                num_total_values = len(df[col])
-                if num_unique_values / num_total_values < 0.5:
-                    df[col] = df[col].astype('category')
-
-            # we also know all categorical columns already xD
-            if col in cat_cols:
-                df[col] = df[col].astype('category')
 
             # Print new column type
             print("dtype after: ", df[col].dtype)

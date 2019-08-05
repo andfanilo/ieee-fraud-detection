@@ -1,9 +1,15 @@
 import sys
+from path import Path
+
 from types import ModuleType, FunctionType
 from gc import get_referents
 
 from IPython.display import Markdown, display
 
+def get_root_dir():
+    # Return Project Root
+    # Trick from https://stackoverflow.com/a/25389715 to handle root project
+    return Path(__file__).parent.parent 
 
 def getsize(obj):
     """sum size of object & members."""

@@ -1,6 +1,7 @@
 altair
 beautifulsoup4
 black
+click
 interpret
 jupyter
 jupyterlab
@@ -22,5 +23,6 @@ seaborn
 snakeviz
 shap
 statsmodels
+umap-learn
 vega
 xgboost
