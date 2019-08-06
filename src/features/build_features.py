@@ -15,13 +15,14 @@ def convert_category_cols(ds):
         # Work on strings to categorical if number of unique values is less than 50%
         if ds.X_train[col].dtype == object or ds.X_test[col].dtype == object:
             num_unique_values = len(
-                (list(ds.X_train[col].values) + list(ds.X_test[col].values)).unique()
+                set(list(ds.X_train[col].values) + list(ds.X_test[col].values))
             )
             num_total_values = len(
                 list(ds.X_train[col].values) + list(ds.X_test[col].values)
             )
             if num_unique_values / num_total_values < 0.5:
-                df[col] = df[col].astype("category")
+                ds.X_train[col] = ds.X_train[col].astype("category")
+                ds.X_test[col] = ds.X_test[col].astype("category")
 
         ## we also know all categorical columns already xD
         if col in ds.get_categorical_cols():
@@ -234,7 +235,7 @@ def drop_cols(ds):
     ds.X_test = ds.X_test.drop(cols_to_drop, axis=1)
 
 
-def build_processed_dataset(ds):
+def build_xgb_dataset(ds):
     clean_inf_nan(ds)
     fill_nan(ds)
     label_encode(ds)
@@ -242,3 +243,12 @@ def build_processed_dataset(ds):
 
     # parse_emails(ds)
     # drop_cols(ds)
+
+def build_lgb_dataset(ds):
+    clean_inf_nan(ds)
+    fill_nan(ds)
+    convert_category_cols(ds)
+    aggregate_cols(ds)
+
+    # parse_emails(ds)
+    drop_cols(ds)
