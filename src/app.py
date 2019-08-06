@@ -3,7 +3,7 @@ import click
 
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import build_processed_dataset
-from src.model.train_model import train_lgb_folds
+from src.model.train_model import train_xgb, train_lgb_folds
 from src.model.predict_model import write_submission
 from src.model.utils import save_model
 
@@ -16,26 +16,27 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option("--nrows_train", type=int, default=None, help="Number of training rows")
-@click.option("--name", type=str, default="submission", help="Submission name")
-def run_experiment(nrows_train, name):
+@click.option("--version", type=str, default=None, help="Dataset version to load")
+@click.option("--name", type=str, default="test", help="Submission name")
+def run_experiment(version, name):
     logger.info("Begin run experiment")
     logger.info("Loading dataset")
     ds = Dataset()
-    ds.load_dataset("processed")
+    ds.load_dataset(version)
 
-    # logger.info("Preprocessing data")
-    # build_processed_dataset(ds)
-    # ds.save_dataset("processed")
+    logger.info("Preprocessing data")
+    build_processed_dataset(ds)
     gc.collect()
 
     logger.info("Building ML model")
-    clf = train_lgb_folds(ds)
-    write_submission(ds, clf, name)
-    save_model(clf, name)
+    # clf = train_xgb(ds)
+    train_lgb_folds(ds)
+    # make_predictions(ds, clf)
+    write_submission(ds, name)
+    # save_model(clf, name)
 
     logger.info("End run experiment")
 
 
 if __name__ == "__main__":
-    run_experiment(1000, "main_submission")
+    run_experiment(None, "main_submission")

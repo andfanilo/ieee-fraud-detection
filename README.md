@@ -24,16 +24,34 @@ pip install --editable .
 
 Then launch jupyter notebook with `jupyter notebook` or lab with `jupyter lab`.
 
-## Run scripts
+## Run experiments
 
-Run full pipeline : `run_experiment --nrows_train 1000 --name test`
+#### Build dataset versions
+
+In a `ipython` console, rebuild dataset in interim :
+
+```py
+from src.dataset.make_dataset import Dataset
+ds = Dataset()
+ds.load_raw()
+ds.save_dataset()
+
+ds.load_raw(nrows=10000)
+ds.save_dataset(version="10000")
+```
+
+You should now be able to launch `run_experiment --version 10000` and `run_experiment`.
+
+#### Run full pipeline
+
+`run_experiment --version 10000 --name submission_10000`
 
 ```
 (ieee-fraud-detection) λ run_experiment --help
 Usage: run_experiment [OPTIONS]
 
 Options:
-  --nrows_train INTEGER  Number of training rows
+  --nrows_train TEXT     Dataset version to load
   --name TEXT            Submission name
   --help                 Show this message and exit.
 ```
@@ -56,22 +74,6 @@ For your security, ensure that other users of your computer do not have read acc
 
 ```
 kaggle competitions submit -c ieee-fraud-detection -f data/submissions/sample_submission.csv -m "My submission message"
-```
-
-# Quick Python lines
-
-In a Python kernel in Jupyter
-
-Rebuild dataset in interim :
-
-```py
-from src.dataset.make_dataset import Dataset
-ds = Dataset()
-ds.load_raw()
-ds.save_dataset()
-
-ds.load_raw(nrows_train=1000, load_test=False)
-ds.save_dataset(version="_1000", save_test=False)
 ```
 
 # Project organization

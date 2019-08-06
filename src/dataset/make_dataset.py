@@ -3,12 +3,11 @@ from path import Path
 import numpy as np
 import pandas as pd
 
-pd.options.display.max_columns = None
-
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from src.utils import get_root_dir, df_empty
+from src.dataset.utils import df_empty
+from src.utils import get_root_dir
 
 
 class Dataset:
@@ -16,7 +15,7 @@ class Dataset:
         self.X_train = None
         self.X_test = None
         self.y_train = None
-        self.sample_submission = None
+        self.submission = None
 
         self.test_loaded = False
 
@@ -525,31 +524,31 @@ class Dataset:
 
     def load_dataset(self, version="", load_test=True):
         self.X_train = pd.read_parquet(
-            self.interim_folder / f"X_train{version}.parquet"
+            self.interim_folder / f"X_train_{version}.parquet"
         )
-        self.y_train = np.load(self.interim_folder / f"y_train{version}.npy")
-        self.sample_submission = pd.read_csv(
-            self.submissions_folder / "sample_submission.csv", index_col="TransactionID"
-        )
+        self.y_train = np.load(self.interim_folder / f"y_train_{version}.npy")
+
         if load_test:
             self.X_test = pd.read_parquet(
-                self.interim_folder / f"X_test{version}.parquet"
+                self.interim_folder / f"X_test_{version}.parquet"
             )
             self.test_loaded = True
         else:
             self.X_test = df_empty(self.X_train.columns, dtypes=self.X_train.dtypes)
 
-    def load_raw(self, nrows_train=None, load_test=True):
+        self.submission = self.__build_submission()
+
+    def load_raw(self, nrows=None, load_test=True):
         """
         Load files into Dataset
 
-        nrows_train: Number of rows to load in training dataset
+        nrows: Number of rows to load in training / testing dataset
         load_test: Load test dataset if True. Put to False if you only plan to explore data
         """
         train_transaction = pd.read_csv(
             self.raw_folder / "train_transaction.csv",
             index_col="TransactionID",
-            nrows=nrows_train,
+            nrows=nrows,
         )
 
         train_identity = pd.read_csv(
@@ -570,7 +569,9 @@ class Dataset:
 
         if load_test:
             test_transaction = pd.read_csv(
-                self.raw_folder / "test_transaction.csv", index_col="TransactionID"
+                self.raw_folder / "test_transaction.csv",
+                index_col="TransactionID",
+                nrows=nrows,
             )
 
             test_identity = pd.read_csv(
@@ -589,15 +590,19 @@ class Dataset:
         else:
             self.X_test = df_empty(self.X_train.columns, dtypes=self.X_train.dtypes)
 
-        self.sample_submission = pd.read_csv(
-            self.submissions_folder / "sample_submission.csv", index_col="TransactionID"
-        )
+        self.submission = self.__build_submission()
 
     def save_dataset(self, version="", save_test=True):
-        self.X_train.to_parquet(self.interim_folder / f"X_train{version}.parquet")
-        np.save(self.interim_folder / f"y_train{version}.npy", self.y_train)
+        self.X_train.to_parquet(self.interim_folder / f"X_train_{version}.parquet")
+        np.save(self.interim_folder / f"y_train_{version}.npy", self.y_train)
         if save_test:
-            self.X_test.to_parquet(self.interim_folder / f"X_test{version}.parquet")
+            self.X_test.to_parquet(self.interim_folder / f"X_test_{version}.parquet")
+
+    def __build_submission(self):
+        df = df_empty(["TransactionID", "isFraud"], dtypes=[str, np.float])
+        df["TransactionID"] = self.X_train.reset_index()["TransactionID"]
+        df["isFraud"] = 0.5
+        return df
 
     def __reduce_mem_usage(self, df):
         """

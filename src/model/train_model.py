@@ -533,5 +533,5 @@ def train_lgb_folds(ds):
         n_jobs=-1,
     )
 
-    ds.sample_submission["isFraud"] = result_dict_lgb["prediction"]
+    ds.submission["isFraud"] = result_dict_lgb["prediction"]
     return None

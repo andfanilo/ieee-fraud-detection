@@ -13,14 +13,6 @@ def get_root_dir():
     return Path(__file__).parent.parent
 
 
-def df_empty(columns, dtypes, index=None):
-    assert len(columns) == len(dtypes)
-    df = pd.DataFrame(index=index)
-    for c, d in zip(columns, dtypes):
-        df[c] = pd.Series(dtype=d)
-    return df
-
-
 def getsize(obj):
     """sum size of object & members."""
     # Custom objects know their class.
