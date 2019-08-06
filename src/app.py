@@ -3,7 +3,7 @@ import click
 
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import build_processed_dataset
-from src.model.train_model import train_xgb, train_lgb_folds
+from src.model.train_model import train_xgb_folds, train_lgb_folds
 from src.model.predict_model import write_submission
 from src.model.utils import save_model
 
@@ -23,16 +23,20 @@ def run_experiment(version, name):
     logger.info("Loading dataset")
     ds = Dataset()
     ds.load_dataset(version)
+    # ds.load_raw(int(version))
+    # ds.save_dataset(version)
 
     logger.info("Preprocessing data")
     build_processed_dataset(ds)
     gc.collect()
 
     logger.info("Building ML model")
-    # clf = train_xgb(ds)
-    train_lgb_folds(ds)
-    # make_predictions(ds, clf)
+    train_xgb_folds(ds)
+    # train_lgb_folds(ds)
     write_submission(ds, name)
+
+    # clf = train_xgb(ds)
+    # make_predictions(ds, clf)
     # save_model(clf, name)
 
     logger.info("End run experiment")

@@ -2,6 +2,10 @@ import numpy as np
 from sklearn import preprocessing
 import datetime
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def convert_category_cols(ds):
     """
@@ -223,8 +227,8 @@ def drop_cols(ds):
             + one_value_cols_test
         )
     )
-    print(f"Will drop the following columns")
-    print(cols_to_drop)
+    logger.info("Will drop the following columns")
+    logger.info(",".join(cols_to_drop))
 
     ds.X_train = ds.X_train.drop(cols_to_drop, axis=1)
     ds.X_test = ds.X_test.drop(cols_to_drop, axis=1)

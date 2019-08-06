@@ -290,6 +290,7 @@ def train_model_classification(
     """
     A function to train a variety of classification models.
     Returns dictionary with oof predictions, test predictions, scores and, if necessary, feature importances.
+    From https://www.kaggle.com/artgor/eda-and-models
     
     :params: X - training data, can be pd.DataFrame or np.ndarray (after normalizing)
     :params: X_test - test data, can be pd.DataFrame or np.ndarray (after normalizing)
@@ -345,7 +346,7 @@ def train_model_classification(
                 X[columns].iloc[train_index],
                 X[columns].iloc[valid_index],
             )
-            y_train, y_valid = y[train_index], y[valid_index]
+            y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
 
         if model_type == "lgb":
             model = lgb.LGBMClassifier(
@@ -531,6 +532,43 @@ def train_lgb_folds(ds):
         n_estimators=5000,
         averaging="usual",
         n_jobs=-1,
+    )
+
+    ds.submission["isFraud"] = result_dict_lgb["prediction"]
+    return None
+
+
+def train_xgb_folds(ds):
+    n_fold = 5
+    folds = TimeSeriesSplit(n_splits=n_fold)
+    folds = KFold(n_splits=5)
+
+    params = {
+        "eta": 0.05,
+        "max_depth": 9,
+        "objective": "binary:logistic",
+        "eval_metric": "auc",
+        "gamma": 0.1,
+        "subsample": 0.9,
+        "colsample_bytree": 0.9,
+        "missing": -999,
+        "verbosity": 1,
+        "nthread": -1,
+    }
+
+    result_dict_lgb = train_model_classification(
+        X=ds.X_train,
+        X_test=ds.X_test,
+        y=ds.y_train,
+        params=params,
+        folds=folds,
+        model_type="xgb",
+        eval_metric="auc",
+        plot_feature_importance=False,
+        verbose=500,
+        early_stopping_rounds=200,
+        n_estimators=5000,
+        averaging="usual",
     )
 
     ds.submission["isFraud"] = result_dict_lgb["prediction"]

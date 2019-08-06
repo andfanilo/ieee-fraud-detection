@@ -9,6 +9,10 @@ import pyarrow.parquet as pq
 from src.dataset.utils import df_empty
 from src.utils import get_root_dir
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Dataset:
     def __init__(self):
@@ -526,7 +530,10 @@ class Dataset:
         self.X_train = pd.read_parquet(
             self.interim_folder / f"X_train_{version}.parquet"
         )
-        self.y_train = np.load(self.interim_folder / f"y_train_{version}.npy")
+        self.y_train = self.__build_submission()
+        self.y_train["isFraud"] = np.load(
+            self.interim_folder / f"y_train_{version}.npy"
+        )
 
         if load_test:
             self.X_test = pd.read_parquet(
@@ -593,14 +600,19 @@ class Dataset:
         self.submission = self.__build_submission()
 
     def save_dataset(self, version="", save_test=True):
-        self.X_train.to_parquet(self.interim_folder / f"X_train_{version}.parquet")
+        self.X_train.to_parquet(
+            self.interim_folder / f"X_train_{version}.parquet", index=True
+        )
         np.save(self.interim_folder / f"y_train_{version}.npy", self.y_train)
         if save_test:
-            self.X_test.to_parquet(self.interim_folder / f"X_test_{version}.parquet")
+            self.X_test.to_parquet(
+                self.interim_folder / f"X_test_{version}.parquet", index=True
+            )
 
     def __build_submission(self):
         df = df_empty(["TransactionID", "isFraud"], dtypes=[str, np.float])
-        df["TransactionID"] = self.X_train.reset_index()["TransactionID"]
+        df["TransactionID"] = self.X_train.index.to_numpy()
+        df = df.set_index("TransactionID")
         df["isFraud"] = 0.5
         return df
 
@@ -614,14 +626,14 @@ class Dataset:
         Also https://www.dataquest.io/blog/pandas-big-data/
         """
         start_mem_usg = df.memory_usage().sum() / 1024 ** 2
-        print("Memory usage of properties dataframe is :", start_mem_usg, " MB")
+        logger.info(f"Memory usage of properties dataframe is : {start_mem_usg} MB")
         NAlist = []  # Keeps track of columns that have missing values filled in.
 
         for col in df.columns:
             # Print current column type
-            print("******************************")
-            print("Column: ", col)
-            print("dtype before: ", df[col].dtype)
+            logger.debug("******************************")
+            logger.debug(f"Column: {col}")
+            logger.debug(f"dtype before: {df[col].dtype}")
 
             if df[col].dtype != object:  # Exclude strings
                 # make variables for Int, max and min
@@ -673,20 +685,20 @@ class Dataset:
                 df[col] = df[col].replace({mn - 1: np.nan})
 
             # Print new column type
-            print("dtype after: ", df[col].dtype)
-            print("******************************")
+            logger.debug("dtype after: ", df[col].dtype)
+            logger.debug("******************************")
 
         # Print final result
-        print("___MEMORY USAGE AFTER COMPLETION:___")
+        logger.info("___MEMORY USAGE AFTER COMPLETION:___")
         mem_usg = df.memory_usage().sum() / 1024 ** 2
-        print("Memory usage is: ", mem_usg, " MB")
-        print("This is ", 100 * mem_usg / start_mem_usg, "% of the initial size")
-        print("_________________")
-        print("")
-        print("Warning: the following numeric columns have missing values")
-        print("_________________")
-        print("")
-        print(NAlist)
-        print("")
+        logger.info(f"Memory usage is: {mem_usg} MB")
+        logger.info(f"This is, {100 * mem_usg / start_mem_usg} % of the initial size")
+        logger.info("_________________")
+        logger.info("")
+        logger.info("Warning: the following numeric columns have missing values")
+        logger.info("_________________")
+        logger.info("")
+        logger.info(",".join(NAlist))
+        logger.info("")
 
         return df
