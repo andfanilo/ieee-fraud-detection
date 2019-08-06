@@ -51,9 +51,9 @@ You should now be able to launch `run_experiment --version 10000` and `run_exper
 Usage: run_experiment [OPTIONS]
 
 Options:
-  --nrows_train TEXT     Dataset version to load
-  --name TEXT            Submission name
-  --help                 Show this message and exit.
+  --version TEXT  Dataset version to load
+  --name TEXT     Submission name
+  --help          Show this message and exit.
 ```
 
 ## Format with Black
