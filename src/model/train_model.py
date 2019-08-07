@@ -556,7 +556,8 @@ def train_xgb_folds(ds):
         "subsample": 0.9,
         "colsample_bytree": 0.9,
         "missing": -999,
-        "verbosity": -1,
+        "verbosity": 0,
+        "random_state": 1337,
         "nthread": -1,
     }
 
