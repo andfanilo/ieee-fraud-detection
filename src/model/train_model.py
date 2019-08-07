@@ -71,6 +71,7 @@ def train_model_regression(
     """
     A function to train a variety of regression models.
     Returns dictionary with oof predictions, test predictions, scores and, if necessary, feature importances.
+    From https://www.kaggle.com/artgor/artgor-utils
     
     :params: X - training data, can be pd.DataFrame or np.ndarray (after normalizing)
     :params: X_test - test data, can be pd.DataFrame or np.ndarray (after normalizing)
@@ -290,7 +291,7 @@ def train_model_classification(
     """
     A function to train a variety of classification models.
     Returns dictionary with oof predictions, test predictions, scores and, if necessary, feature importances.
-    From https://www.kaggle.com/artgor/eda-and-models
+    From https://www.kaggle.com/artgor/artgor-utils
     
     :params: X - training data, can be pd.DataFrame or np.ndarray (after normalizing)
     :params: X_test - test data, can be pd.DataFrame or np.ndarray (after normalizing)
@@ -504,18 +505,22 @@ def train_lgb_folds(ds):
         "num_leaves": 256,
         "min_child_samples": 79,
         "objective": "binary",
+        "metric": "auc",
         "max_depth": 13,
         "learning_rate": 0.03,
-        "boosting_type": "gbdt",
         "subsample_freq": 3,
-        "subsample": 0.9,
-        "bagging_seed": 11,
-        "metric": "auc",
-        "verbosity": -1,
         "reg_alpha": 0.3,
         "reg_lambda": 0.3,
-        "colsample_bytree": 0.9,
-        #'categorical_feature': cat_cols
+        "feature_fraction": 0.9,
+        "bagging_fraction": 0.9,
+        "boosting_type": "gbdt",
+        "verbosity": -1,
+        "seed": 1337,
+        "feature_fraction_seed": 1337,
+        "bagging_seed": 1337,
+        "drop_seed": 1337,
+        "data_random_seed": 1337,
+        #'categorical_feature': ds.get_categorical_cols()
     }
 
     result_dict_lgb = train_model_classification(
@@ -528,14 +533,13 @@ def train_lgb_folds(ds):
         eval_metric="auc",
         plot_feature_importance=False,
         verbose=500,
-        early_stopping_rounds=200,
-        n_estimators=5000,
+        early_stopping_rounds=50,
+        n_estimators=500,
         averaging="usual",
         n_jobs=-1,
     )
 
-    ds.submission["isFraud"] = result_dict_lgb["prediction"]
-    return None
+    return result_dict_lgb
 
 
 def train_xgb_folds(ds):
@@ -552,11 +556,11 @@ def train_xgb_folds(ds):
         "subsample": 0.9,
         "colsample_bytree": 0.9,
         "missing": -999,
-        "verbosity": 1,
+        "verbosity": -1,
         "nthread": -1,
     }
 
-    result_dict_lgb = train_model_classification(
+    result_dict_xgb = train_model_classification(
         X=ds.X_train,
         X_test=ds.X_test,
         y=ds.y_train,
@@ -566,10 +570,9 @@ def train_xgb_folds(ds):
         eval_metric="auc",
         plot_feature_importance=False,
         verbose=500,
-        early_stopping_rounds=200,
-        n_estimators=5000,
+        early_stopping_rounds=50,
+        n_estimators=500,
         averaging="usual",
     )
 
-    ds.submission["isFraud"] = result_dict_lgb["prediction"]
-    return None
+    return result_dict_xgb

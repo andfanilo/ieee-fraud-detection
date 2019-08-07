@@ -530,7 +530,9 @@ class Dataset:
         self.X_train = pd.read_parquet(
             self.interim_folder / f"X_train_{version}.parquet"
         )
-        self.y_train = self.__build_submission()
+        self.y_train = df_empty(["TransactionID", "isFraud"], dtypes=[str, np.float])
+        self.y_train["TransactionID"] = self.X_train.index.to_numpy()
+        self.y_train = self.y_train.set_index("TransactionID")
         self.y_train["isFraud"] = np.load(
             self.interim_folder / f"y_train_{version}.npy"
         )
@@ -611,7 +613,7 @@ class Dataset:
 
     def __build_submission(self):
         df = df_empty(["TransactionID", "isFraud"], dtypes=[str, np.float])
-        df["TransactionID"] = self.X_train.index.to_numpy()
+        df["TransactionID"] = self.X_test.index.to_numpy()
         df = df.set_index("TransactionID")
         df["isFraud"] = 0.5
         return df
