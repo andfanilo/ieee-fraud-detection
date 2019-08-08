@@ -5,6 +5,10 @@ from src.dataset.make_dataset import Dataset
 from src.features.build_features import build_processed_dataset, drop_cols
 from src.model.train_model import train_xgb, train_xgb_folds, train_lgb_folds
 
+import warnings
+
+warnings.filterwarnings("ignore")
+
 import logging
 
 logging.basicConfig(
