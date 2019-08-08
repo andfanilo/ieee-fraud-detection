@@ -9,6 +9,15 @@ from gc import get_referents
 
 from IPython.display import Markdown, display
 
+from colorama import init
+from termcolor import colored
+
+init()
+
+
+def print_colored_green(line):
+    print(colored(line, "green"))
+
 
 def get_root_dir():
     # Return Project Root

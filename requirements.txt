@@ -2,6 +2,7 @@ altair
 beautifulsoup4
 black
 click
+colorama
 interpret
 jupyter
 jupyterlab
@@ -24,6 +25,7 @@ seaborn
 snakeviz
 shap
 statsmodels
+termcolor
 tqdm
 umap-learn
 vega

@@ -3,8 +3,7 @@ import click
 
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import build_processed_dataset, drop_cols
-from src.model.train_model import train_xgb_folds, train_lgb_folds
-from src.model.predict_model import write_submission
+from src.model.train_model import train_xgb, train_xgb_folds, train_lgb_folds
 
 import logging
 
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 def run_experiment(version, name):
     logger.info("Begin run experiment")
     logger.info("Loading dataset")
+
     ds = Dataset()
     ds.load_dataset(version)
 
@@ -30,16 +30,17 @@ def run_experiment(version, name):
     logger.info("Building LGB model without drop columns")
     result = train_lgb_folds(ds)
     ds.submission["isFraud"] = result["prediction"]
-    write_submission(ds, "lgb_no_drop")
+    ds.write_submission("lgb_folds")
 
-    logger.info("Drop columns")
-    drop_cols(ds)
-    gc.collect()
+    # logger.info("Building XGB model")
+    # result = train_xgb_folds(ds)
+    # ds.submission["isFraud"] = result["prediction"]
+    # ds.write_submission("xgb_folds")
 
-    logger.info("Building LGB model with drop columns")
-    result = train_lgb_folds(ds)
-    ds.submission["isFraud"] = result["prediction"]
-    write_submission(ds, "lgb_with_drop")
+    # logger.info("Building XGB model")
+    # result = train_xgb(ds)
+    # ds.submission["isFraud"] = result["prediction"]
+    # ds.write_submission("xgb")
 
     logger.info("End run experiment")
 

@@ -611,6 +611,11 @@ class Dataset:
                 self.interim_folder / f"X_test_{version}.parquet", index=True
             )
 
+    def write_submission(self, filename):
+        self.submission.reset_index().to_csv(
+            self.submissions_folder / filename + ".csv", index=False
+        )
+
     def __build_submission(self):
         df = df_empty(["TransactionID", "isFraud"], dtypes=[str, np.float])
         df["TransactionID"] = self.X_test.index.to_numpy()

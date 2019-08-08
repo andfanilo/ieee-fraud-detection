@@ -303,7 +303,7 @@ def drop_cols(ds):
 
 
 def build_processed_dataset(ds):
-    clean_inf_nan(ds)
+    # clean_inf_nan(ds)
     fill_nan(ds)
     parse_emails(ds)
     label_encode(ds)

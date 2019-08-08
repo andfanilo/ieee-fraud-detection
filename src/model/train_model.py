@@ -1,4 +1,5 @@
 import time
+
 import numpy as np
 import pandas as pd
 
@@ -6,6 +7,7 @@ import xgboost as xgb
 import lightgbm as lgb
 
 from src.model.utils import eval_auc, group_mean_log_mae
+from src.utils import print_colored_green
 
 from sklearn.model_selection import (
     StratifiedKFold,
@@ -28,11 +30,13 @@ def train_xgb(ds):
         subsample=0.9,
         colsample_bytree=0.9,
         gamma=0.1,
-        missing=-999,
+        # missing=-999,
     )
 
     clf.fit(ds.X_train, ds.y_train)
-    return clf
+    result_dict = {}
+    result_dict["prediction"] = clf.predict_proba(ds.X_test)[:, 1]
+    return result_dict
 
 
 def train_lgb(ds):
@@ -48,7 +52,9 @@ def train_lgb(ds):
     )
 
     clf.fit(ds.X_train, ds.y_train)
-    return clf
+    result_dict = {}
+    result_dict["prediction"] = clf.predict_proba(ds.X_test)[:, 1]
+    return result_dict
 
 
 def train_model_regression(
@@ -233,8 +239,8 @@ def train_model_regression(
             )
 
     prediction /= n_splits
-    print(
-        "CV mean score: {0:.4f}, std: {1:.4f}.".format(np.mean(scores), np.std(scores))
+    print_colored_green(
+        f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}."
     )
 
     result_dict["oof"] = oof
@@ -459,8 +465,8 @@ def train_model_classification(
 
     prediction /= n_splits
 
-    print(
-        "CV mean score: {0:.4f}, std: {1:.4f}.".format(np.mean(scores), np.std(scores))
+    print_colored_green(
+        f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}."
     )
 
     result_dict["oof"] = oof
