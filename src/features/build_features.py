@@ -50,9 +50,12 @@ def label_encode(ds):
     input: a Dataset
     output: (train, test)
     """
-    # for col in ds.get_categorical_cols():
     for col in ds.X_train.columns:
-        if ds.X_train[col].dtype == object or ds.X_test[col].dtype == object:
+        if (
+            ds.X_train[col].dtype == object
+            or ds.X_test[col].dtype == object
+            or col in ds.get_categorical_cols()
+        ):
             lbl = preprocessing.LabelEncoder()
             lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
             ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
@@ -252,6 +255,9 @@ def clean_inf_nan(ds):
 
 
 def fill_nan(ds):
+    # Filling Nans with mean
+    # ds.X_train.fillna(ds.X_train.mean(), inplace=True)
+    # ds.X_test.fillna(ds.X_test.mean(), inplace=True)
     ds.X_train.fillna(-999, inplace=True)
     ds.X_test.fillna(-999, inplace=True)
 
@@ -303,11 +309,10 @@ def drop_cols(ds):
 
 
 def build_processed_dataset(ds):
-    # clean_inf_nan(ds)
+    clean_inf_nan(ds)
     fill_nan(ds)
     parse_emails(ds)
     label_encode(ds)
     # convert_category_cols(ds)
     aggregate_cols(ds)
-
-    # drop_cols(ds)
+    drop_cols(ds)

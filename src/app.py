@@ -50,4 +50,4 @@ def run_experiment(version, name):
 
 
 if __name__ == "__main__":
-    run_experiment(None, "main_submission")
+    run_experiment()
