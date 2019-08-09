@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn import preprocessing
+from sklearn.preprocessing import LabelEncoder
 import datetime
 
 import logging
@@ -25,7 +25,12 @@ def convert_category_cols(ds):
                 ds.X_test[col] = ds.X_test[col].astype("category")
 
         ## we also know all categorical columns already xD
-        if col in ds.get_categorical_cols():
+        if col in ds.get_categorical_cols() + [
+            "P_emaildomain_bin",
+            "P_emaildomain_suffix",
+            "R_emaildomain_bin",
+            "R_emaildomain_suffix",
+        ]:
             ds.X_train[col] = ds.X_train[col].astype("category")
             ds.X_test[col] = ds.X_test[col].astype("category")
 
@@ -45,7 +50,7 @@ def create_date(ds, start_date="2017-12-01"):
 
 def label_encode(ds):
     """
-    Apply label encoder to ds.X_train and ds.X_test categorical columns
+    Apply label encoder to ds.X_train and ds.X_test categorical columns, while preserving nan values
 
     input: a Dataset
     output: (train, test)
@@ -56,10 +61,19 @@ def label_encode(ds):
             or ds.X_test[col].dtype == object
             or col in ds.get_categorical_cols()
         ):
-            lbl = preprocessing.LabelEncoder()
+            nan_constant = "NAN"
+            ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
+            ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
+
+            lbl = LabelEncoder()
             lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
             ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
             ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
+
+            if nan_constant in lbl.classes_:
+                nan_constant = lbl.transform([nan_constant])[0]
+                ds.X_train.loc[ds.X_train[col] == nan_constant, col] = np.nan
+                ds.X_test.loc[ds.X_test[col] == nan_constant, col] = np.nan
 
 
 def aggregate_cols(ds):
@@ -310,9 +324,8 @@ def drop_cols(ds):
 
 def build_processed_dataset(ds):
     clean_inf_nan(ds)
-    fill_nan(ds)
     parse_emails(ds)
     label_encode(ds)
-    # convert_category_cols(ds)
     aggregate_cols(ds)
     drop_cols(ds)
+    convert_category_cols(ds)

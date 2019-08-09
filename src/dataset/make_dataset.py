@@ -6,7 +6,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from src.dataset.utils import df_empty
+from src.dataset.utils import df_empty, reduce_mem_usage
 from src.utils import get_root_dir
 
 import logging
@@ -568,7 +568,7 @@ class Dataset:
             train_identity, how="left", left_index=True, right_index=True
         )
 
-        train = self.__reduce_mem_usage(train)
+        train = reduce_mem_usage(train)
 
         self.y_train = train["isFraud"].copy()
         del train_transaction, train_identity
@@ -591,7 +591,7 @@ class Dataset:
                 test_identity, how="left", left_index=True, right_index=True
             )
 
-            test = self.__reduce_mem_usage(test)
+            test = reduce_mem_usage(test)
             del test_transaction, test_identity
             self.X_test = test.copy()
             del test
@@ -621,91 +621,4 @@ class Dataset:
         df["TransactionID"] = self.X_test.index.to_numpy()
         df = df.set_index("TransactionID")
         df["isFraud"] = 0.5
-        return df
-
-    def __reduce_mem_usage(self, df):
-        """
-        Reducing Memory Size of dataset
-        
-        From https://www.kaggle.com/mjbahmani/reducing-memory-size-for-ieee
-        Based on this great kernel https://www.kaggle.com/arjanso/reducing-dataframe-memory-size-by-65
-        
-        Also https://www.dataquest.io/blog/pandas-big-data/
-        """
-        start_mem_usg = df.memory_usage().sum() / 1024 ** 2
-        logger.info(f"Memory usage of properties dataframe is : {start_mem_usg} MB")
-        NAlist = []  # Keeps track of columns that have missing values filled in.
-
-        for col in df.columns:
-            # Print current column type
-            logger.debug("******************************")
-            logger.debug(f"Column: {col}")
-            logger.debug(f"dtype before: {df[col].dtype}")
-
-            if df[col].dtype != object:  # Exclude strings
-                # make variables for Int, max and min
-                IsInt = False
-                mx = df[col].max()
-                mn = df[col].min()
-                # Integer does not support NA, therefore, NA needs to be filled
-                if not np.isfinite(df[col]).all():
-                    NAlist.append(col)
-                    df[col].fillna(mn - 1, inplace=True)
-
-                # test if column can be converted to an integer
-                asint = df[col].fillna(0).astype(np.int64)
-                result = df[col] - asint
-                result = result.sum()
-                if result > -0.01 and result < 0.01:
-                    IsInt = True
-                # Make Integer/unsigned Integer datatypes
-                if IsInt:
-                    if mn >= 0:
-                        if mx < 255:
-                            df[col] = df[col].astype(np.uint8)
-                        elif mx < 65535:
-                            df[col] = df[col].astype(np.uint16)
-                        elif mx < 4294967295:
-                            df[col] = df[col].astype(np.uint32)
-                        else:
-                            df[col] = df[col].astype(np.uint64)
-                    else:
-                        if mn > np.iinfo(np.int8).min and mx < np.iinfo(np.int8).max:
-                            df[col] = df[col].astype(np.int8)
-                        elif (
-                            mn > np.iinfo(np.int16).min and mx < np.iinfo(np.int16).max
-                        ):
-                            df[col] = df[col].astype(np.int16)
-                        elif (
-                            mn > np.iinfo(np.int32).min and mx < np.iinfo(np.int32).max
-                        ):
-                            df[col] = df[col].astype(np.int32)
-                        elif (
-                            mn > np.iinfo(np.int64).min and mx < np.iinfo(np.int64).max
-                        ):
-                            df[col] = df[col].astype(np.int64)
-                # Make float datatypes 32 bit
-                else:
-                    df[col] = df[col].astype(np.float32)
-
-                # Reput NaN where we have mn - 1 in column
-                df[col] = df[col].replace({mn - 1: np.nan})
-
-            # Print new column type
-            logger.debug("dtype after: ", df[col].dtype)
-            logger.debug("******************************")
-
-        # Print final result
-        logger.info("___MEMORY USAGE AFTER COMPLETION:___")
-        mem_usg = df.memory_usage().sum() / 1024 ** 2
-        logger.info(f"Memory usage is: {mem_usg} MB")
-        logger.info(f"This is, {100 * mem_usg / start_mem_usg} % of the initial size")
-        logger.info("_________________")
-        logger.info("")
-        logger.info("Warning: the following numeric columns have missing values")
-        logger.info("_________________")
-        logger.info("")
-        logger.info(",".join(NAlist))
-        logger.info("")
-
         return df

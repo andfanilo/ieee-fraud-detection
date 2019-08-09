@@ -309,7 +309,7 @@ def train_lgb_folds(ds):
         "bagging_seed": 1337,
         "drop_seed": 1337,
         "data_random_seed": 1337,
-        #'categorical_feature': ds.get_categorical_cols()
+        # "categorical_feature": ds.get_categorical_cols() + ["P_emaildomain_bin", "P_emaildomain_suffix", "R_emaildomain_bin", "R_emaildomain_suffix"]
     }
 
     result_dict_lgb = train_model_classification(
@@ -343,7 +343,7 @@ def train_xgb_folds(ds):
         "gamma": 0.1,
         "subsample": 0.9,
         "colsample_bytree": 0.9,
-        "missing": -999,
+        #"missing": -999,
         "verbosity": 0,
         "random_state": 1337,
         "nthread": -1,
