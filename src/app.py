@@ -31,12 +31,12 @@ def run_experiment(version, name):
     build_processed_dataset(ds)
     gc.collect()
 
-    logger.info("Building LGB model without drop columns")
+    logger.info("Building LGB model folds")
     result = train_lgb_folds(ds)
     ds.submission["isFraud"] = result["prediction"]
     ds.write_submission("lgb_folds")
 
-    # logger.info("Building XGB model")
+    # logger.info("Building XGB model folds")
     # result = train_xgb_folds(ds)
     # ds.submission["isFraud"] = result["prediction"]
     # ds.write_submission("xgb_folds")
