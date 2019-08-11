@@ -39,22 +39,20 @@ def train_xgb(ds):
     return result_dict
 
 
-def train_lgb(ds):
-    clf = lgb.LGBMClassifier(
-        n_estimators=500,
-        n_jobs=4,
-        max_depth=9,
-        learning_rate=0.05,
-        subsample=0.9,
-        colsample_bytree=0.9,
-        gamma=0.1,
-        random_state=314,
+def train_lgb(
+    X_train, y_train, X_valid, y_valid, params, n_estimators=50000, n_jobs=-1
+):
+    model = lgb.LGBMClassifier(**params, n_estimators=n_estimators, n_jobs=n_jobs)
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=[(X_train, y_train), (X_valid, y_valid)],
+        eval_metric=eval_auc,
+        verbose=100,
+        early_stopping_rounds=200,
     )
 
-    clf.fit(ds.X_train, ds.y_train)
-    result_dict = {}
-    result_dict["prediction"] = clf.predict_proba(ds.X_test)[:, 1]
-    return result_dict
+    return model
 
 
 def train_model_classification(
@@ -138,18 +136,7 @@ def train_model_classification(
             y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
 
         if model_type == "lgb":
-            model = lgb.LGBMClassifier(
-                **params, n_estimators=n_estimators, n_jobs=n_jobs
-            )
-            model.fit(
-                X_train,
-                y_train,
-                eval_set=[(X_train, y_train), (X_valid, y_valid)],
-                eval_metric=metrics_dict[eval_metric]["lgb_metric_name"],
-                verbose=verbose,
-                early_stopping_rounds=early_stopping_rounds,
-            )
-
+            model = train_lgb(X_train, y_train, X_valid, y_valid, params)
             y_pred_valid = model.predict_proba(X_valid)[:, 1]
             y_pred = model.predict_proba(X_test, num_iteration=model.best_iteration_)[
                 :, 1
