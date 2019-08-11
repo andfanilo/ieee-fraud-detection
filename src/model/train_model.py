@@ -22,14 +22,17 @@ from sklearn import metrics
 
 
 def train_xgb(
-    X_train, y_train, X_valid, y_valid, feature_names, params, n_estimators=50000, n_jobs=-1
+    X_train,
+    y_train,
+    X_valid,
+    y_valid,
+    feature_names,
+    params,
+    n_estimators=50000,
+    n_jobs=-1,
 ):
-    train_data = xgb.DMatrix(
-        data=X_train, label=y_train, feature_names=feature_names
-    )
-    valid_data = xgb.DMatrix(
-        data=X_valid, label=y_valid, feature_names=feature_names
-    )
+    train_data = xgb.DMatrix(data=X_train, label=y_train, feature_names=feature_names)
+    valid_data = xgb.DMatrix(data=X_valid, label=y_valid, feature_names=feature_names)
 
     watchlist = [(train_data, "train"), (valid_data, "valid_data")]
     model = xgb.train(
@@ -41,7 +44,7 @@ def train_xgb(
         early_stopping_rounds=200,
     )
     return model
-    
+
 
 def train_lgb(
     X_train, y_train, X_valid, y_valid, params, n_estimators=50000, n_jobs=-1
@@ -149,7 +152,14 @@ def train_model_classification(
 
         if model_type == "xgb":
             model = train_xgb(
-                X_train, y_train, X_valid, y_valid, columns, params, n_estimators, n_jobs
+                X_train,
+                y_train,
+                X_valid,
+                y_valid,
+                columns,
+                params,
+                n_estimators,
+                n_jobs,
             )
             y_pred_valid = model.predict(
                 xgb.DMatrix(X_valid, feature_names=columns),

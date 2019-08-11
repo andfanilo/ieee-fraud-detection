@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from src.features.utils import calc_smooth_mean
 from sklearn.preprocessing import LabelEncoder
 import datetime
 
@@ -7,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def convert_category_cols(ds):
+def convert_category_cols_lgb(ds):
     """
     Only necessary for LGB if doing automatic category
     """
@@ -25,27 +27,34 @@ def convert_category_cols(ds):
                 ds.X_test[col] = ds.X_test[col].astype("category")
 
         ## we also know all categorical columns already xD
-        if col in ds.get_categorical_cols() + [
-            "P_emaildomain_bin",
-            "P_emaildomain_suffix",
-            "R_emaildomain_bin",
-            "R_emaildomain_suffix",
-        ]:
+        if col in ds.get_categorical_cols():
             ds.X_train[col] = ds.X_train[col].astype("category")
             ds.X_test[col] = ds.X_test[col].astype("category")
 
 
-def create_date(ds, start_date="2017-12-01"):
+def build_date_features(ds, start_date="2017-12-01"):
     """
     Preprocess TransactionDT
     """
-    startdate = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-    ds.X_train["TransactionDT"] = ds.X_train["TransactionDT"].apply(
-        lambda x: (startdate + datetime.timedelta(seconds=x))
+    # day of week in which a transaction happened.
+    ds.X_train["Transaction_day_of_week"] = np.floor(
+        (ds.X_train["TransactionDT"] / (3600 * 24) - 1) % 7
     )
-    ds.X_test["TransactionDT"] = ds.X_test["TransactionDT"].apply(
-        lambda x: (startdate + datetime.timedelta(seconds=x))
+    ds.X_test["Transaction_day_of_week"] = np.floor(
+        (ds.X_test["TransactionDT"] / (3600 * 24) - 1) % 7
     )
+
+    # hour of the day in which a transaction happened.
+    ds.X_train["Transaction_hour"] = np.floor(ds.X_train["TransactionDT"] / 3600) % 24
+    ds.X_test["Transaction_hour"] = np.floor(ds.X_test["TransactionDT"] / 3600) % 24
+
+    # startdate = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    # ds.X_train["TransactionDT"] = ds.X_train["TransactionDT"].apply(
+    #    lambda x: (startdate + datetime.timedelta(seconds=x))
+    # )
+    # ds.X_test["TransactionDT"] = ds.X_test["TransactionDT"].apply(
+    #    lambda x: (startdate + datetime.timedelta(seconds=x))
+    # )
 
 
 def label_encode(ds):
@@ -59,7 +68,7 @@ def label_encode(ds):
         if (
             ds.X_train[col].dtype == object
             or ds.X_test[col].dtype == object
-            or col in ds.get_categorical_cols()
+            # or col in ds.get_categorical_cols()
         ):
             nan_constant = "NAN"
             ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
@@ -74,6 +83,32 @@ def label_encode(ds):
                 nan_constant = lbl.transform([nan_constant])[0]
                 ds.X_train.loc[ds.X_train[col] == nan_constant, col] = np.nan
                 ds.X_test.loc[ds.X_test[col] == nan_constant, col] = np.nan
+
+
+def count_encoding(ds):
+    """
+    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
+    """
+    for feature in ["card1", "card2", "card3", "card4", "card5", "card6", "id_36"]:
+        ds.X_train[feature + "_count_full"] = ds.X_train[feature].map(
+            pd.concat(
+                [ds.X_train[feature], ds.X_test[feature]], ignore_index=True
+            ).value_counts(dropna=False)
+        )
+        ds.X_test[feature + "_count_full"] = ds.X_test[feature].map(
+            pd.concat(
+                [ds.X_train[feature], ds.X_test[feature]], ignore_index=True
+            ).value_counts(dropna=False)
+        )
+
+    # Encoding - count encoding separately for ds.X_train and ds.X_test
+    for feature in ["id_01", "id_31", "id_33", "id_36"]:
+        ds.X_train[feature + "_count_dist"] = ds.X_train[feature].map(
+            ds.X_train[feature].value_counts(dropna=False)
+        )
+        ds.X_test[feature + "_count_dist"] = ds.X_test[feature].map(
+            ds.X_test[feature].value_counts(dropna=False)
+        )
 
 
 def aggregate_cols(ds):
@@ -322,10 +357,150 @@ def drop_cols(ds):
     ds.X_test = ds.X_test.drop(cols_to_drop, axis=1)
 
 
+def id_split(ds):
+    """
+    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
+    """
+
+    def id_split_part(dataframe):
+        dataframe["device_name"] = dataframe["DeviceInfo"].str.split("/", expand=True)[
+            0
+        ]
+        dataframe["device_version"] = dataframe["DeviceInfo"].str.split(
+            "/", expand=True
+        )[1]
+
+        dataframe["OS_id_30"] = dataframe["id_30"].str.split(" ", expand=True)[0]
+        dataframe["version_id_30"] = dataframe["id_30"].str.split(" ", expand=True)[1]
+
+        dataframe["browser_id_31"] = dataframe["id_31"].str.split(" ", expand=True)[0]
+        dataframe["version_id_31"] = dataframe["id_31"].str.split(" ", expand=True)[1]
+
+        dataframe["screen_width"] = dataframe["id_33"].str.split("x", expand=True)[0]
+        dataframe["screen_height"] = dataframe["id_33"].str.split("x", expand=True)[1]
+
+        dataframe["id_34"] = dataframe["id_34"].str.split(":", expand=True)[1]
+        dataframe["id_23"] = dataframe["id_23"].str.split(":", expand=True)[1]
+
+        dataframe.loc[
+            dataframe["device_name"].str.contains("SM", na=False), "device_name"
+        ] = "Samsung"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("SAMSUNG", na=False), "device_name"
+        ] = "Samsung"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("GT-", na=False), "device_name"
+        ] = "Samsung"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("Moto G", na=False), "device_name"
+        ] = "Motorola"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("Moto", na=False), "device_name"
+        ] = "Motorola"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("moto", na=False), "device_name"
+        ] = "Motorola"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("LG-", na=False), "device_name"
+        ] = "LG"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("rv:", na=False), "device_name"
+        ] = "RV"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("HUAWEI", na=False), "device_name"
+        ] = "Huawei"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("ALE-", na=False), "device_name"
+        ] = "Huawei"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("-L", na=False), "device_name"
+        ] = "Huawei"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("Blade", na=False), "device_name"
+        ] = "ZTE"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("BLADE", na=False), "device_name"
+        ] = "ZTE"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("Linux", na=False), "device_name"
+        ] = "Linux"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("XT", na=False), "device_name"
+        ] = "Sony"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("HTC", na=False), "device_name"
+        ] = "HTC"
+        dataframe.loc[
+            dataframe["device_name"].str.contains("ASUS", na=False), "device_name"
+        ] = "Asus"
+
+        dataframe.loc[
+            dataframe.device_name.isin(
+                dataframe.device_name.value_counts()[
+                    dataframe.device_name.value_counts() < 200
+                ].index
+            ),
+            "device_name",
+        ] = "Others"
+        dataframe["had_id"] = 1
+
+        return dataframe
+
+    ds.X_train = id_split_part(ds.X_train)
+    ds.X_test = id_split_part(ds.X_test)
+
+
+def build_transaction_features(ds):
+    """
+    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
+    """
+    # log of transaction amount.
+    ds.X_train["TransactionAmt_Log"] = np.log(ds.X_train["TransactionAmt"])
+    ds.X_test["TransactionAmt_Log"] = np.log(ds.X_test["TransactionAmt"])
+
+    # decimal part of the transaction amount.
+    ds.X_train["TransactionAmt_decimal"] = (
+        (ds.X_train["TransactionAmt"] - ds.X_train["TransactionAmt"].astype(int)) * 1000
+    ).astype(int)
+    ds.X_test["TransactionAmt_decimal"] = (
+        (ds.X_test["TransactionAmt"] - ds.X_test["TransactionAmt"].astype(int)) * 1000
+    ).astype(int)
+
+
+def build_interaction_features(ds):
+    """
+    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
+    """
+    # Some arbitrary features interaction + those extracted from our own analysis
+    random_intersection = [
+        "id_02__id_20",
+        "id_02__D8",
+        "D11__DeviceInfo",
+        "DeviceInfo__P_emaildomain",
+        "P_emaildomain__C2",
+        "card2__dist1",
+        "card1__card5",
+        "card2__id_20",
+        "card5__P_emaildomain",
+        "addr1__card1",
+    ]
+    my_intersections = ["C11__C13"]
+    for feature in random_intersection + my_intersections:
+        f1, f2 = feature.split("__")
+        ds.X_train[feature] = (
+            ds.X_train[f1].astype(str) + "_" + ds.X_train[f2].astype(str)
+        )
+        ds.X_test[feature] = ds.X_test[f1].astype(str) + "_" + ds.X_test[f2].astype(str)
+
+
 def build_processed_dataset(ds):
     clean_inf_nan(ds)
     parse_emails(ds)
+    build_transaction_features(ds)
+    build_date_features(ds)
+    build_interaction_features(ds)
+    id_split(ds)
+    count_encoding(ds)
     label_encode(ds)
     aggregate_cols(ds)
     drop_cols(ds)
-    convert_category_cols(ds)
