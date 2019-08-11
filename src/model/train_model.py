@@ -21,22 +21,27 @@ from sklearn.model_selection import (
 from sklearn import metrics
 
 
-def train_xgb(ds):
-    clf = xgb.XGBClassifier(
-        n_estimators=500,
-        n_jobs=4,
-        max_depth=9,
-        learning_rate=0.05,
-        subsample=0.9,
-        colsample_bytree=0.9,
-        gamma=0.1,
+def train_xgb(
+    X_train, y_train, X_valid, y_valid, feature_names, params, n_estimators=50000, n_jobs=-1
+):
+    train_data = xgb.DMatrix(
+        data=X_train, label=y_train, feature_names=feature_names
+    )
+    valid_data = xgb.DMatrix(
+        data=X_valid, label=y_valid, feature_names=feature_names
     )
 
-    clf.fit(ds.X_train, ds.y_train)
-    result_dict = {}
-    result_dict["prediction"] = clf.predict_proba(ds.X_test)[:, 1]
-    return result_dict
-
+    watchlist = [(train_data, "train"), (valid_data, "valid_data")]
+    model = xgb.train(
+        dtrain=train_data,
+        num_boost_round=n_estimators,
+        params=params,
+        evals=watchlist,
+        verbose_eval=100,
+        early_stopping_rounds=200,
+    )
+    return model
+    
 
 def train_lgb(
     X_train, y_train, X_valid, y_valid, params, n_estimators=50000, n_jobs=-1
@@ -96,7 +101,6 @@ def train_model_classification(
     # to set up scoring parameters
     metrics_dict = {
         "auc": {
-            "lgb_metric_name": eval_auc,
             "catboost_metric_name": "AUC",
             "sklearn_scoring_function": metrics.roc_auc_score,
         }
@@ -144,28 +148,15 @@ def train_model_classification(
             ]
 
         if model_type == "xgb":
-            train_data = xgb.DMatrix(
-                data=X_train, label=y_train, feature_names=X.columns
-            )
-            valid_data = xgb.DMatrix(
-                data=X_valid, label=y_valid, feature_names=X.columns
-            )
-
-            watchlist = [(train_data, "train"), (valid_data, "valid_data")]
-            model = xgb.train(
-                dtrain=train_data,
-                num_boost_round=n_estimators,
-                evals=watchlist,
-                early_stopping_rounds=early_stopping_rounds,
-                verbose_eval=verbose,
-                params=params,
+            model = train_xgb(
+                X_train, y_train, X_valid, y_valid, columns, params, n_estimators, n_jobs
             )
             y_pred_valid = model.predict(
-                xgb.DMatrix(X_valid, feature_names=X.columns),
+                xgb.DMatrix(X_valid, feature_names=columns),
                 ntree_limit=model.best_ntree_limit,
             )
             y_pred = model.predict(
-                xgb.DMatrix(X_test, feature_names=X.columns),
+                xgb.DMatrix(X_test, feature_names=columns),
                 ntree_limit=model.best_ntree_limit,
             )
 
@@ -331,7 +322,6 @@ def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
         "gamma": 0.1,
         "subsample": 0.9,
         "colsample_bytree": 0.9,
-        # "missing": -999,
         "verbosity": 0,
         "random_state": 1337,
         "nthread": n_thread,
@@ -346,8 +336,8 @@ def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
         model_type="xgb",
         eval_metric="auc",
         plot_feature_importance=False,
-        verbose=100,
-        early_stopping_rounds=50,
+        verbose=500,
+        early_stopping_rounds=200,
         n_estimators=n_estimators,
         averaging="usual",
     )
