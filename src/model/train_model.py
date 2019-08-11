@@ -30,7 +30,6 @@ def train_xgb(ds):
         subsample=0.9,
         colsample_bytree=0.9,
         gamma=0.1,
-        # missing=-999,
     )
 
     clf.fit(ds.X_train, ds.y_train)
@@ -136,7 +135,9 @@ def train_model_classification(
             y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
 
         if model_type == "lgb":
-            model = train_lgb(X_train, y_train, X_valid, y_valid, params)
+            model = train_lgb(
+                X_train, y_train, X_valid, y_valid, params, n_estimators, n_jobs
+            )
             y_pred_valid = model.predict_proba(X_valid)[:, 1]
             y_pred = model.predict_proba(X_test, num_iteration=model.best_iteration_)[
                 :, 1
@@ -271,7 +272,7 @@ def train_model_classification(
     return result_dict
 
 
-def train_lgb_folds(ds):
+def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
     n_fold = 5
     folds = KFold(n_splits=n_fold)
     # folds = TimeSeriesSplit(n_splits=n_fold)
@@ -310,15 +311,15 @@ def train_lgb_folds(ds):
         plot_feature_importance=False,
         verbose=500,
         early_stopping_rounds=200,
-        n_estimators=500000,
+        n_estimators=n_estimators,
         averaging="usual",
-        n_jobs=-1,
+        n_jobs=n_jobs,
     )
 
     return result_dict_lgb
 
 
-def train_xgb_folds(ds):
+def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
     n_fold = 5
     folds = KFold(n_splits=5)
 
@@ -333,7 +334,7 @@ def train_xgb_folds(ds):
         # "missing": -999,
         "verbosity": 0,
         "random_state": 1337,
-        "nthread": -1,
+        "nthread": n_thread,
     }
 
     result_dict_xgb = train_model_classification(
@@ -347,7 +348,7 @@ def train_xgb_folds(ds):
         plot_feature_importance=False,
         verbose=100,
         early_stopping_rounds=50,
-        n_estimators=500,
+        n_estimators=n_estimators,
         averaging="usual",
     )
 
