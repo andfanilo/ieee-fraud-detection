@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import altair as alt
@@ -28,13 +31,24 @@ def compare_isfraud_hist(X_train, col, bins):
     fig.show()
 
 
-def compare_bins_hist_train_test(X, X_test, col, width=400):
+def auto_bin(X, col, bins):
+    """
+    Kind of plt.hist for Altair
+    """
+    #I think if one automatically created bin is not completed, you get broadcast error, change bons number then
+    #or correct code to take empty bins into account
+    df = X[[col, "label"]].copy()
+    df[col] = pd.cut(df[col], np.linspace(df[col].min() - 1, df[col].max(), bins))
+    return compare_bins_isfraud_hist(df, col)
+
+
+def compare_bins_train_test_hist(X, X_test, col, width=400):
     return bins_histogram(X, col, f"Counts of train {col}", width) | bins_histogram(
         X_test, col, f"Counts of test {col}", width
     )
 
 
-def compare_bins_hist_isfraud(X, col, width=800):
+def compare_bins_isfraud_hist(X, col, width=800):
     feature_count = (
         X.groupby(col)["label"]
         .value_counts(dropna=False)
@@ -52,7 +66,7 @@ def compare_bins_hist_isfraud(X, col, width=800):
             color=alt.Color("label:N"),
             tooltip=["index", "count", "label"],
         )
-        .properties(title=f"Layered counts of {col}", width=width)
+        .properties(title=f"Counts of {col} by fraud", width=width)
     )
 
 
