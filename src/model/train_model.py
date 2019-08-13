@@ -1,24 +1,22 @@
 import time
 
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
-
-import xgboost as xgb
-import lightgbm as lgb
-
-from src.model.utils import eval_auc, group_mean_log_mae
-from src.utils import print_colored_green
-
+from sklearn import metrics
 from sklearn.model_selection import (
-    StratifiedKFold,
+    GridSearchCV,
+    GroupKFold,
     KFold,
     RepeatedKFold,
-    GroupKFold,
-    GridSearchCV,
-    train_test_split,
+    StratifiedKFold,
     TimeSeriesSplit,
+    train_test_split,
 )
-from sklearn import metrics
+
+import xgboost as xgb
+from src.model.utils import eval_auc, group_mean_log_mae
+from src.utils import print_colored_green
 
 
 def train_xgb(

@@ -1,10 +1,11 @@
+import datetime
+import logging
+
 import numpy as np
 import pandas as pd
-from src.features.utils import calc_smooth_mean
 from sklearn.preprocessing import LabelEncoder
-import datetime
 
-import logging
+from src.features.utils import calc_smooth_mean
 
 logger = logging.getLogger(__name__)
 

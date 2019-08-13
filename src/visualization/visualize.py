@@ -1,12 +1,11 @@
+import altair as alt
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import plotly.express as px
+import seaborn as sns
 
 from src.visualization.utils import value_counts, value_counts_byfraud
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import altair as alt
-import plotly.express as px
 
 
 def hist_train_test(X_train, X_test, col, bins):
@@ -27,7 +26,7 @@ def hist_isfraud(X_train, col, bins):
     ax1.hist(X_train[X_train["label"] == 0][col], bins=bins)
     ax1.set_title(f"Distribution of non fraud {col}")
 
-    ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor='orange')
+    ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor="orange")
     ax2.set_title(f"Distribution of fraud {col}")
 
     fig.show()
@@ -45,9 +44,10 @@ def interactive_hist_isfraud(X, col, bins):
 
 
 def interactive_bar_train_test(X, X_test, col, width=400):
-    return interactive_bar(X, col, f"Counts of train {col}", width) | interactive_bar(
-        X_test, col, f"Counts of test {col}", width
-    ).interactive()
+    return (
+        interactive_bar(X, col, f"Counts of train {col}", width)
+        | interactive_bar(X_test, col, f"Counts of test {col}", width).interactive()
+    )
 
 
 def interactive_bar_isfraud(X, col, width=800):

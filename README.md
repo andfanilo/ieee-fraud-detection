@@ -56,9 +56,10 @@ Options:
   --help          Show this message and exit.
 ```
 
-## Format with Black
+## Format code
 
 ```
+isort -rc src/
 black src/
 ```
 

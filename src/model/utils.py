@@ -1,7 +1,9 @@
-from src.utils import get_root_dir
 import pickle
+
 import numpy as np
 from numba import jit
+
+from src.utils import get_root_dir
 
 
 def save_model(clf, name):

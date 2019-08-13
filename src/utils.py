@@ -1,15 +1,12 @@
 import sys
-from path import Path
+from gc import get_referents
+from types import FunctionType, ModuleType
 
 import numpy as np
 import pandas as pd
-
-from types import ModuleType, FunctionType
-from gc import get_referents
-
-from IPython.display import Markdown, display
-
 from colorama import init
+from IPython.display import Markdown, display
+from path import Path
 from termcolor import colored
 
 init()

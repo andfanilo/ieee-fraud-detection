@@ -5,6 +5,7 @@ click
 colorama
 imbalanced-learn
 interpret
+isort
 jupyter
 jupyterlab
 kaggle

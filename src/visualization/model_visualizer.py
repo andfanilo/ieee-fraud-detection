@@ -1,7 +1,6 @@
+import matplotlib.pylab as pl
 import numpy as np
 import pandas as pd
-import matplotlib.pylab as pl
-
 import shap
 
 shap.initjs()
