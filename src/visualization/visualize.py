@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from src.visualization.utils import value_counts, value_counts_byfraud
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import altair as alt
@@ -35,8 +37,8 @@ def auto_bin(X, col, bins):
     """
     Kind of plt.hist for Altair
     """
-    #I think if one automatically created bin is not completed, you get broadcast error, change bons number then
-    #or correct code to take empty bins into account
+    # I think if one automatically created bin is not completed, you get broadcast error, change bons number then
+    # or correct code to take empty bins into account
     df = X[[col, "label"]].copy()
     df[col] = pd.cut(df[col], np.linspace(df[col].min() - 1, df[col].max(), bins))
     return compare_bins_isfraud_hist(df, col)
@@ -49,22 +51,32 @@ def compare_bins_train_test_hist(X, X_test, col, width=400):
 
 
 def compare_bins_isfraud_hist(X, col, width=800):
-    feature_count = (
-        X.groupby(col)["label"]
-        .value_counts(dropna=False)
-        .reset_index(0)
-        .rename(columns={"label": "count", col: "index"})
-        .reset_index()
-    )
-    feature_count["index"] = feature_count["index"].astype(str)
+    feature_count = value_counts_byfraud(X, col)
+    feature_count[col] = feature_count[col].astype(str)
     return (
         alt.Chart(feature_count)
         .mark_bar(opacity=0.7)
         .encode(
-            x=alt.X("index:N", axis=alt.Axis(title="index"), sort=None),
+            x=alt.X(f"{col}:N", axis=alt.Axis(title=col), sort=None),
             y=alt.Y("count:Q", axis=alt.Axis(title="Count")),
             color=alt.Color("label:N"),
-            tooltip=["index", "count", "label"],
+            tooltip=[col, "count", "label"],
+        )
+        .properties(title=f"Counts of {col} by fraud", width=width)
+    )
+
+
+def compare_bins_isfraud_horizontal_hist(X, col, width=800):
+    feature_count = value_counts_byfraud(X, col)
+    feature_count[col] = feature_count[col].astype(str)
+    return (
+        alt.Chart(feature_count)
+        .mark_bar(opacity=0.7)
+        .encode(
+            x=alt.X("count:Q", axis=alt.Axis(title="Count")),
+            y=alt.Y(f"{col}:N", axis=alt.Axis(title=col), sort=None),
+            color=alt.Color("label:N"),
+            tooltip=[col, "count", "label"],
         )
         .properties(title=f"Counts of {col} by fraud", width=width)
     )
@@ -73,13 +85,8 @@ def compare_bins_isfraud_hist(X, col, width=800):
 def bins_histogram(X, col, title=None, width=400):
     if title == None:
         title = f"Counts of {col}"
-    feature_count = (
-        X[col]
-        .value_counts(dropna=False)
-        .sort_index()
-        .reset_index()
-        .rename(columns={col: "count", "index": col})
-    )
+    feature_count = value_counts(X, col)
+
     feature_count[col] = feature_count[col].astype(str)
     return (
         alt.Chart(feature_count)
@@ -90,23 +97,4 @@ def bins_histogram(X, col, title=None, width=400):
             tooltip=[col, "count"],
         )
         .properties(title=title, width=width)
-    )
-
-
-def categorical_horizontal_histogram(X, col, width=400):
-    feature_count = (
-        X[col]
-        .value_counts(dropna=False)
-        .reset_index()
-        .rename(columns={col: "count", "index": col})
-    )
-    return (
-        alt.Chart(feature_count)
-        .mark_bar()
-        .encode(
-            y=alt.Y(f"{col}:N", axis=alt.Axis(title=col)),
-            x=alt.X("count:Q", axis=alt.Axis(title="Count")),
-            tooltip=[col, "count"],
-        )
-        .properties(title=f"Counts of {col}", width=width)
     )
