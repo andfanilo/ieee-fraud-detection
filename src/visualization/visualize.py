@@ -9,7 +9,7 @@ import altair as alt
 import plotly.express as px
 
 
-def compare_train_test_hist(X_train, X_test, col, bins):
+def hist_train_test(X_train, X_test, col, bins):
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15, 4))
 
     ax1.hist(X_train[col], bins=bins)
@@ -21,19 +21,19 @@ def compare_train_test_hist(X_train, X_test, col, bins):
     fig.show()
 
 
-def compare_isfraud_hist(X_train, col, bins):
+def hist_isfraud(X_train, col, bins):
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15, 4))
 
     ax1.hist(X_train[X_train["label"] == 0][col], bins=bins)
     ax1.set_title(f"Distribution of non fraud {col}")
 
-    ax2.hist(X_train[X_train["label"] == 1][col], bins=bins)
+    ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor='orange')
     ax2.set_title(f"Distribution of fraud {col}")
 
     fig.show()
 
 
-def auto_bin(X, col, bins):
+def interactive_hist_isfraud(X, col, bins):
     """
     Kind of plt.hist for Altair
     """
@@ -41,16 +41,16 @@ def auto_bin(X, col, bins):
     # or correct code to take empty bins into account
     df = X[[col, "label"]].copy()
     df[col] = pd.cut(df[col], np.linspace(df[col].min() - 1, df[col].max(), bins))
-    return compare_bins_isfraud_hist(df, col)
+    return interactive_bar_isfraud(df, col)
 
 
-def compare_bins_train_test_hist(X, X_test, col, width=400):
-    return bins_histogram(X, col, f"Counts of train {col}", width) | bins_histogram(
+def interactive_bar_train_test(X, X_test, col, width=400):
+    return interactive_bar(X, col, f"Counts of train {col}", width) | interactive_bar(
         X_test, col, f"Counts of test {col}", width
-    )
+    ).interactive()
 
 
-def compare_bins_isfraud_hist(X, col, width=800):
+def interactive_bar_isfraud(X, col, width=800):
     feature_count = value_counts_byfraud(X, col)
     feature_count[col] = feature_count[col].astype(str)
     return (
@@ -63,10 +63,10 @@ def compare_bins_isfraud_hist(X, col, width=800):
             tooltip=[col, "count", "label"],
         )
         .properties(title=f"Counts of {col} by fraud", width=width)
-    )
+    ).interactive()
 
 
-def compare_bins_isfraud_horizontal_hist(X, col, width=800):
+def interactive_barh_isfraud(X, col, width=800):
     feature_count = value_counts_byfraud(X, col)
     feature_count[col] = feature_count[col].astype(str)
     return (
@@ -79,10 +79,10 @@ def compare_bins_isfraud_horizontal_hist(X, col, width=800):
             tooltip=[col, "count", "label"],
         )
         .properties(title=f"Counts of {col} by fraud", width=width)
-    )
+    ).interactive()
 
 
-def bins_histogram(X, col, title=None, width=400):
+def interactive_bar(X, col, title=None, width=400):
     if title == None:
         title = f"Counts of {col}"
     feature_count = value_counts(X, col)
@@ -97,4 +97,4 @@ def bins_histogram(X, col, title=None, width=400):
             tooltip=[col, "count"],
         )
         .properties(title=title, width=width)
-    )
+    ).interactive()
