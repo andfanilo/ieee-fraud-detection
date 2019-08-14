@@ -24,6 +24,20 @@ pip install --editable .
 
 Then launch jupyter notebook with `jupyter notebook` or lab with `jupyter lab`.
 
+## pre-commit formatting code
+
+The following commands are made as pre-commit hooks.
+
+```
+seed-isort-config --application-directories src/
+isort -rc src/
+black src/
+```
+
+`pre-commit install` to install pre-commit into your git hooks.
+
+If you want to manually run all pre-commit hooks on a repository, run `pre-commit run --all-files`.
+
 ## Run experiments
 
 #### Build dataset versions
@@ -54,13 +68,6 @@ Options:
   --version TEXT  Dataset version to load
   --name TEXT     Submission name
   --help          Show this message and exit.
-```
-
-## Format code
-
-```
-isort -rc src/
-black src/
 ```
 
 ## Kaggle API credentials

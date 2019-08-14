@@ -20,10 +20,12 @@ pandas
 pandas-profiling
 path.py
 plotly
+pre-commit
 pyarrow
 scikit-learn
 scipy
 seaborn
+seed-isort-config
 snakeviz
 shap
 statsmodels

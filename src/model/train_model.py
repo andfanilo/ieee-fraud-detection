@@ -3,6 +3,7 @@ import time
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 from sklearn import metrics
 from sklearn.model_selection import (
     GridSearchCV,
@@ -13,8 +14,6 @@ from sklearn.model_selection import (
     TimeSeriesSplit,
     train_test_split,
 )
-
-import xgboost as xgb
 from src.model.utils import eval_auc, group_mean_log_mae
 from src.utils import print_colored_green
 

@@ -4,7 +4,6 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-
 from src.features.utils import calc_smooth_mean
 
 logger = logging.getLogger(__name__)

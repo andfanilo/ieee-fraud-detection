@@ -4,7 +4,6 @@ import warnings
 
 import click
 from sklearn.model_selection import train_test_split
-
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import (
     build_processed_dataset,
