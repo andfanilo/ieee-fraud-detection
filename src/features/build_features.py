@@ -37,16 +37,16 @@ def build_date_features(ds, start_date="2017-12-01"):
     Preprocess TransactionDT
     """
     # day of week in which a transaction happened.
-    ds.X_train["Transaction_day_of_week"] = np.floor(
+    ds.X_train["day_of_week"] = np.floor(
         (ds.X_train["TransactionDT"] / (3600 * 24) - 1) % 7
     )
-    ds.X_test["Transaction_day_of_week"] = np.floor(
+    ds.X_test["day_of_week"] = np.floor(
         (ds.X_test["TransactionDT"] / (3600 * 24) - 1) % 7
     )
 
     # hour of the day in which a transaction happened.
-    ds.X_train["Transaction_hour"] = np.floor(ds.X_train["TransactionDT"] / 3600) % 24
-    ds.X_test["Transaction_hour"] = np.floor(ds.X_test["TransactionDT"] / 3600) % 24
+    ds.X_train["hour"] = np.floor(ds.X_train["TransactionDT"] / 3600) % 24
+    ds.X_test["hour"] = np.floor(ds.X_test["TransactionDT"] / 3600) % 24
 
     # startdate = datetime.datetime.strptime(start_date, "%Y-%m-%d")
     # ds.X_train["TransactionDT"] = ds.X_train["TransactionDT"].apply(
@@ -109,6 +109,51 @@ def count_encoding(ds):
         ds.X_test[feature + "_count_dist"] = ds.X_test[feature].map(
             ds.X_test[feature].value_counts(dropna=False)
         )
+
+
+def frequency_encoding(ds):
+    # https://www.kaggle.com/kyakovlev/ieee-ground-baseline
+    i_cols = [
+        "card1",
+        "card2",
+        "card3",
+        "card5",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "D8",
+        "D9",
+        "addr1",
+        "addr2",
+        "dist1",
+        "dist2",
+        "P_emaildomain",
+        "R_emaildomain",
+    ]
+
+    for col in i_cols:
+        temp_df = pd.concat([ds.X_train[[col]], ds.X_test[[col]]])
+        fq_encode = temp_df[col].value_counts().to_dict()
+        ds.X_train[col + "_fq_enc"] = ds.X_train[col].map(fq_encode)
+        ds.X_test[col + "_fq_enc"] = ds.X_test[col].map(fq_encode)
 
 
 def aggregate_cols(ds):
@@ -303,6 +348,20 @@ def clean_inf_nan(ds):
     ds.X_test.replace([np.inf, -np.inf], np.nan)
 
 
+def clean_noise_cards(ds):
+    # https://www.kaggle.com/kyakovlev/ieee-ground-baseline
+    valid_card = ds.X_train["card1"].value_counts()
+    valid_card = valid_card[valid_card > 10]
+    valid_card = list(valid_card.index)
+
+    ds.X_train["card1"] = np.where(
+        ds.X_train["card1"].isin(valid_card), ds.X_train["card1"], np.nan
+    )
+    ds.X_test["card1"] = np.where(
+        ds.X_test["card1"].isin(valid_card), ds.X_test["card1"], np.nan
+    )
+
+
 def fill_nan(ds):
     # Filling Nans with mean
     # ds.X_train.fillna(ds.X_train.mean(), inplace=True)
@@ -495,12 +554,14 @@ def build_interaction_features(ds):
 
 def build_processed_dataset(ds):
     clean_inf_nan(ds)
+    clean_noise_cards(ds)
     parse_emails(ds)
     build_transaction_features(ds)
     build_date_features(ds)
     build_interaction_features(ds)
     id_split(ds)
     count_encoding(ds)
+    frequency_encoding(ds)
     label_encode(ds)
     aggregate_cols(ds)
     drop_cols(ds)
