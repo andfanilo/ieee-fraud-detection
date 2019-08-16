@@ -9,6 +9,7 @@ isort
 jupyter
 jupyterlab
 kaggle
+keras
 lightgbm
 line-profiler
 missingno
@@ -29,6 +30,7 @@ seed-isort-config
 snakeviz
 shap
 statsmodels
+tensorflow
 termcolor
 tqdm
 umap-learn

@@ -6,6 +6,8 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from src.features.utils import calc_smooth_mean
 
+from src.features.reduce_dimensions import VestaReducer
+
 logger = logging.getLogger(__name__)
 
 
@@ -362,14 +364,6 @@ def clean_noise_cards(ds):
     )
 
 
-def fill_nan(ds):
-    # Filling Nans with mean
-    # ds.X_train.fillna(ds.X_train.mean(), inplace=True)
-    # ds.X_test.fillna(ds.X_test.mean(), inplace=True)
-    ds.X_train.fillna(-999, inplace=True)
-    ds.X_test.fillna(-999, inplace=True)
-
-
 def drop_cols(ds):
     one_value_cols = [
         col for col in ds.X_train.columns if ds.X_train[col].nunique() <= 1
@@ -555,13 +549,20 @@ def build_interaction_features(ds):
 def build_processed_dataset(ds):
     clean_inf_nan(ds)
     clean_noise_cards(ds)
+
     parse_emails(ds)
+    id_split(ds)
     build_transaction_features(ds)
     build_date_features(ds)
     build_interaction_features(ds)
-    id_split(ds)
+    aggregate_cols(ds)
+
+    reducer = VestaReducer(ds)
+    reducer.pca(ds)
+    reducer.drop_v_cols(ds)
+
     count_encoding(ds)
     frequency_encoding(ds)
     label_encode(ds)
-    aggregate_cols(ds)
+
     drop_cols(ds)
