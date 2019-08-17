@@ -35,6 +35,17 @@ class VestaReducer:
             ds.X_train[col] = X_train_pca[:, i]
             ds.X_test[col] = X_test_pca[:, i]
 
+    def umap(self, ds, n_components=40):
+        reducer = umap.UMAP(n_components=n_components, random_state=42)
+        reducer.fit(self.X_train)
+        X_train_umap = reducer.transform(self.X_train)
+        X_test_umap = reducer.transform(self.X_test)
+
+        for i in range(n_components):
+            col = f"V{i}_umap"
+            ds.X_train[col] = X_train_umap[:, i]
+            ds.X_test[col] = X_test_umap[:, i]
+
     def drop_v_cols(self, ds):
         """
         Drop original columns at the end

@@ -558,7 +558,7 @@ def build_processed_dataset(ds):
     aggregate_cols(ds)
 
     reducer = VestaReducer(ds)
-    reducer.pca(ds)
+    reducer.umap(ds)
     reducer.drop_v_cols(ds)
 
     count_encoding(ds)
