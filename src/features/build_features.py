@@ -59,7 +59,7 @@ def build_date_features(ds, start_date="2017-12-01"):
     # )
 
 
-def label_encode(ds):
+def label_encoding(ds):
     """
     Apply label encoder to ds.X_train and ds.X_test categorical columns, while preserving nan values
 
@@ -156,6 +156,21 @@ def frequency_encoding(ds):
         fq_encode = temp_df[col].value_counts().to_dict()
         ds.X_train[col + "_fq_enc"] = ds.X_train[col].map(fq_encode)
         ds.X_test[col + "_fq_enc"] = ds.X_test[col].map(fq_encode)
+
+
+def one_hot_encoding(ds):
+    # https://markhneedham.com/blog/2017/07/05/pandasscikit-learn-get_dummies-testtrain-sets-valueerror-shapes-not-aligned/
+    i_cols = [f"M{i}" for i in range(1, 10)]
+    for col in i_cols:
+        all_categories = pd.concat((ds.X_train[col], ds.X_test[col])).fillna("?").unique()
+        ds.X_train[col] = ds.X_train[col].fillna("?").astype('category', categories = all_categories)
+        ds.X_test[col] = ds.X_test[col].fillna("?").astype('category', categories = all_categories)
+    
+    ds.X_train = pd.concat([ds.X_train, pd.get_dummies(ds.X_train[i_cols])], axis=1)
+    ds.X_test = pd.concat([ds.X_test, pd.get_dummies(ds.X_test[i_cols])], axis=1)
+
+    ds.X_train = ds.X_train.drop(i_cols, axis=1)
+    ds.X_test = ds.X_test.drop(i_cols, axis=1)
 
 
 def aggregate_cols(ds):
@@ -557,12 +572,13 @@ def build_processed_dataset(ds):
     build_interaction_features(ds)
     aggregate_cols(ds)
 
-    reducer = VestaReducer(ds)
-    reducer.umap(ds)
-    reducer.drop_v_cols(ds)
+    # reducer = VestaReducer(ds)
+    # reducer.umap(ds)
+    # reducer.drop_v_cols(ds)
 
+    one_hot_encoding(ds)
     count_encoding(ds)
     frequency_encoding(ds)
-    label_encode(ds)
+    label_encoding(ds)
 
     drop_cols(ds)
