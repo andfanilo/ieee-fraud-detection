@@ -15,7 +15,10 @@ warnings.filterwarnings("ignore")
 
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+    level=logging.INFO,
+    format="%(asctime)s %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    filename="./data/submissions/latest_run.log",
 )
 logger = logging.getLogger(__name__)
 
@@ -65,8 +68,9 @@ def run_experiment(version, name):
     # ds.submission["isFraud"] = result["prediction"]
     # ds.write_submission("xgb_folds")
 
-    logger.info("Building LGB model folds")
     convert_category_cols_lgb(ds)
+
+    logger.info("Building LGB model folds")
     result = train_lgb_folds(ds)
     ds.submission["isFraud"] = result["prediction"]
     ds.write_submission("lgb_folds")

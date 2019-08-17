@@ -1,3 +1,4 @@
+import logging
 import time
 
 import lightgbm as lgb
@@ -16,6 +17,8 @@ from sklearn.model_selection import (
 )
 from src.model.utils import eval_auc, group_mean_log_mae
 from src.utils import print_colored_green
+
+logger = logging.getLogger(__name__)
 
 
 def train_xgb(
@@ -236,6 +239,7 @@ def train_model_classification(
     print_colored_green(
         f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}."
     )
+    logger.info(f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}.")
 
     result_dict["oof"] = oof
     result_dict["prediction"] = prediction
