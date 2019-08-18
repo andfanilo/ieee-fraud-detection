@@ -621,9 +621,9 @@ def build_processed_dataset(ds):
     build_interaction_features(ds)
     aggregate_cols(ds)
 
-    # reducer = VestaReducer(ds)
-    # reducer.umap(ds)
-    # reducer.drop_v_cols(ds)
+    reducer = VestaReducer(ds)
+    reducer.umap(ds)
+    reducer.drop_v_cols(ds)
 
     one_hot_encoding(ds)
     count_encoding(ds)

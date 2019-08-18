@@ -36,7 +36,7 @@ class VestaReducer:
 
     def umap(self, ds, n_components=40):
         reducer = umap.UMAP(n_components=n_components, random_state=42)
-        reducer.fit(self.X_train)
+        reducer.fit(self.X_train, y=self.y_train)
         X_train_umap = reducer.transform(self.X_train)
         X_test_umap = reducer.transform(self.X_test)
 
