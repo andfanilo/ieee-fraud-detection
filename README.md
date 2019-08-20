@@ -50,8 +50,8 @@ ds = Dataset()
 ds.load_raw()
 ds.save_dataset()
 
-ds.load_raw(nrows=10000)
-ds.save_dataset(version="10000")
+ds.load_raw(nrows=30000)
+ds.save_dataset(version="30000")
 ```
 
 You should now be able to launch `run_experiment --version=30000` and `run_experiment`.
@@ -59,6 +59,10 @@ You should now be able to launch `run_experiment --version=30000` and `run_exper
 #### Run full pipeline
 
 XGB run : `run_experiment --version=30000 ---model=xgb`
+
+LGB run : `run_experiment --version=30000 ---model=lgb`
+
+CatBoost run : `run_experiment --version=30000 ---model=cat`
 
 ```
 (ieee-fraud-detection) λ run_experiment --help
