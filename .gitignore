@@ -61,11 +61,16 @@ target/
 # pyenv python configuration file
 .python-version
 
-# exclude data from source control by default
+# exclude data and models from source control
 data/
 models/
 
 # ipynb checkpoints
 .ipynb_checkpoints
 
-.vscode
+# Catboost stuff
+catboost_info/
+cat_feature*
+
+# vscode settings
+.vscode/settings.json

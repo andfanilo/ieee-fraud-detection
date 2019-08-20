@@ -5,6 +5,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+from catboost import CatBoostClassifier
 from sklearn import metrics
 from sklearn.model_selection import (
     GridSearchCV,
@@ -62,6 +63,24 @@ def train_lgb(
     return model
 
 
+def train_cat(X_train, y_train, X_valid, y_valid, params, n_estimators=50000):
+    model = CatBoostClassifier(
+        iterations=n_estimators,
+        eval_metric="AUC",
+        **params,
+        loss_function="Logloss",
+    )
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=(X_valid, y_valid),
+        cat_features=[],
+        use_best_model=True,
+        verbose=100,
+        early_stopping_rounds=200,
+    )
+
+
 def train_model_classification(
     X,
     X_test,
@@ -102,12 +121,7 @@ def train_model_classification(
     X_test = X_test[columns]
 
     # to set up scoring parameters
-    metrics_dict = {
-        "auc": {
-            "catboost_metric_name": "AUC",
-            "sklearn_scoring_function": metrics.roc_auc_score,
-        }
-    }
+    metrics_dict = {"auc": {"sklearn_scoring_function": metrics.roc_auc_score}}
 
     result_dict = {}
     if averaging == "usual":
@@ -184,20 +198,7 @@ def train_model_classification(
             y_pred = model.predict_proba(X_test)
 
         if model_type == "cat":
-            model = CatBoostClassifier(
-                iterations=n_estimators,
-                eval_metric=metrics_dict[eval_metric]["catboost_metric_name"],
-                **params,
-                loss_function=metrics_dict[eval_metric]["catboost_metric_name"],
-            )
-            model.fit(
-                X_train,
-                y_train,
-                eval_set=(X_valid, y_valid),
-                cat_features=[],
-                use_best_model=True,
-                verbose=False,
-            )
+            model = train_cat(X_train, y_train, X_valid, y_valid, params, n_estimators)
 
             y_pred_valid = model.predict(X_valid)
             y_pred = model.predict(X_test)
@@ -274,6 +275,41 @@ def train_model_classification(
     return result_dict
 
 
+def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
+    n_fold = 5
+    folds = KFold(n_splits=5)
+
+    params = {
+        "eta": 0.05,
+        "max_depth": 9,
+        "objective": "binary:logistic",
+        "eval_metric": "auc",
+        "gamma": 0.1,
+        "subsample": 0.9,
+        "colsample_bytree": 0.9,
+        "verbosity": 0,
+        "random_state": 1337,
+        "nthread": n_thread,
+    }
+
+    result_dict_xgb = train_model_classification(
+        X=ds.X_train,
+        X_test=ds.X_test,
+        y=ds.y_train,
+        params=params,
+        folds=folds,
+        model_type="xgb",
+        eval_metric="auc",
+        plot_feature_importance=False,
+        verbose=500,
+        early_stopping_rounds=200,
+        n_estimators=n_estimators,
+        averaging="usual",
+    )
+
+    return result_dict_xgb
+
+
 def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
     n_fold = 5
     folds = KFold(n_splits=n_fold)
@@ -323,31 +359,25 @@ def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
     return result_dict_lgb
 
 
-def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
+def train_cat_folds(ds, n_estimators=50000):
     n_fold = 5
-    folds = KFold(n_splits=5)
+    folds = KFold(n_splits=n_fold)
 
     params = {
-        "eta": 0.05,
-        "max_depth": 9,
-        "objective": "binary:logistic",
-        "eval_metric": "auc",
-        "gamma": 0.1,
-        "subsample": 0.9,
-        "colsample_bytree": 0.9,
-        "verbosity": 0,
-        "random_state": 1337,
-        "nthread": n_thread,
+        "learning_rate": 0.1,
+        "depth": 15,
+        "random_seed": 1337,
+        "use_best_model": True,
     }
 
-    result_dict_xgb = train_model_classification(
+    result_dict_cat = train_model_classification(
         X=ds.X_train,
         X_test=ds.X_test,
         y=ds.y_train,
         params=params,
         folds=folds,
-        model_type="xgb",
-        eval_metric="auc",
+        model_type="cat",
+        eval_metric="AUC",
         plot_feature_importance=False,
         verbose=500,
         early_stopping_rounds=200,
@@ -355,4 +385,4 @@ def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
         averaging="usual",
     )
 
-    return result_dict_xgb
+    return result_dict_cat

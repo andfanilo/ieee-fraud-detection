@@ -54,20 +54,20 @@ ds.load_raw(nrows=10000)
 ds.save_dataset(version="10000")
 ```
 
-You should now be able to launch `run_experiment --version 10000` and `run_experiment`.
+You should now be able to launch `run_experiment --version=30000` and `run_experiment`.
 
 #### Run full pipeline
 
-`run_experiment --version 10000 --name submission_10000`
+XGB run : `run_experiment --version=30000 ---model=xgb`
 
 ```
 (ieee-fraud-detection) λ run_experiment --help
 Usage: run_experiment [OPTIONS]
 
 Options:
-  --version TEXT  Dataset version to load
-  --name TEXT     Submission name
-  --help          Show this message and exit.
+  --version TEXT                Dataset version to load
+  --model [simple|xgb|lgb|cat]  Type of model to run
+  --help                        Show this message and exit.
 ```
 
 ## Kaggle API credentials
