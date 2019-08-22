@@ -36,47 +36,32 @@ logger = logging.getLogger(__name__)
     help="Type of model to run",
 )
 def run_experiment(version, model):
-    logger.info("Begin run experiment")
-    logger.info("Loading dataset")
+    preprocessor = {"lgb": convert_category_cols_lgb}
+    modeller = {
+        "xgb": train_xgb_folds,
+        "lgb": train_lgb_folds,
+        "cat": train_cat_folds,
+        "logistic": train_logistic_folds,
+    }
 
+    logger.info("Begin run experiment")
+
+    logger.info("Loading dataset")
     ds = Dataset()
     ds.load_dataset(version)
 
     logger.info("Preprocessing data")
     build_processed_dataset(ds)
+    if model in preprocessor:
+        preprocessor[model](ds)
     gc.collect()
 
-    if model == "xgb":
-        logger.info("Building XGB model folds")
-        result = train_xgb_folds(ds)
-        ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("xgb_folds")
+    logger.info(f"Building {model} model")
+    result = modeller[model](ds)
 
-    elif model == "lgb":
-        convert_category_cols_lgb(ds)
-
-        logger.info("Building LGB model folds")
-        result = train_lgb_folds(ds)
-        ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("lgb_folds")
-
-    elif model == "cat":
-        logger.info("Building Catboost model folds")
-        result = train_cat_folds(ds)
-        ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("cat_folds")
-
-    elif model == "logistic":
-        ds.X_train = ds.X_train.fillna(-1)
-        ds.X_test = ds.X_test.fillna(-1)
-
-        logger.info("Building Logistic model folds")
-        result = train_logistic_folds(ds)
-        ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("logistic_folds")
-
-    else:
-        return
+    logger.info(f"Saving {model} predictions")
+    ds.submission["isFraud"] = result["prediction"]
+    ds.write_submission(f"{model}_preds")
 
     logger.info("End run experiment")
 
