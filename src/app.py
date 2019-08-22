@@ -3,7 +3,6 @@ import logging
 import warnings
 
 import click
-from sklearn.model_selection import train_test_split
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import (
     build_processed_dataset,
@@ -11,9 +10,9 @@ from src.features.build_features import (
 )
 from src.model.train_model import (
     train_lgb_folds,
-    train_xgb,
     train_xgb_folds,
     train_cat_folds,
+    train_logistic_folds,
 )
 
 warnings.filterwarnings("ignore")
@@ -32,7 +31,7 @@ logger = logging.getLogger(__name__)
 @click.option("--version", type=str, default="", help="Dataset version to load")
 @click.option(
     "--model",
-    type=click.Choice(["simple", "xgb", "lgb", "cat"]),
+    type=click.Choice(["xgb", "lgb", "cat", "logistic"]),
     default="lgb",
     help="Type of model to run",
 )
@@ -47,34 +46,7 @@ def run_experiment(version, model):
     build_processed_dataset(ds)
     gc.collect()
 
-    if model == "simple":
-        logger.info("Building simple XGB model")
-        X_train, X_valid, y_train, y_valid = train_test_split(
-            ds.X_train, ds.y_train, test_size=0.3, random_state=0
-        )
-        result = train_xgb(
-            X_train,
-            X_valid,
-            y_train,
-            y_valid,
-            ds.X_train.columns,
-            {
-                "eta": 0.05,
-                "max_depth": 9,
-                "objective": "binary:logistic",
-                "eval_metric": "auc",
-                "gamma": 0.1,
-                "subsample": 0.9,
-                "colsample_bytree": 0.9,
-                "verbosity": 0,
-                "random_state": 1337,
-                "nthread": -1,
-            },
-        )
-        ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("xgb")
-
-    elif model == "xgb":
+    if model == "xgb":
         logger.info("Building XGB model folds")
         result = train_xgb_folds(ds)
         ds.submission["isFraud"] = result["prediction"]
@@ -92,7 +64,16 @@ def run_experiment(version, model):
         logger.info("Building Catboost model folds")
         result = train_cat_folds(ds)
         ds.submission["isFraud"] = result["prediction"]
-        ds.write_submission("lgb_folds")
+        ds.write_submission("cat_folds")
+
+    elif model == "logistic":
+        ds.X_train = ds.X_train.fillna(-1)
+        ds.X_test = ds.X_test.fillna(-1)
+
+        logger.info("Building Logistic model folds")
+        result = train_logistic_folds(ds)
+        ds.submission["isFraud"] = result["prediction"]
+        ds.write_submission("logistic_folds")
 
     else:
         return

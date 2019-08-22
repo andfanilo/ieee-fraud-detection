@@ -7,6 +7,7 @@ import pandas as pd
 import xgboost as xgb
 from catboost import CatBoostClassifier
 from sklearn import metrics
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import (
     GridSearchCV,
     GroupKFold,
@@ -65,10 +66,7 @@ def train_lgb(
 
 def train_cat(X_train, y_train, X_valid, y_valid, params, n_estimators=50000):
     model = CatBoostClassifier(
-        iterations=n_estimators,
-        eval_metric="AUC",
-        **params,
-        loss_function="Logloss",
+        iterations=n_estimators, eval_metric="AUC", **params, loss_function="Logloss"
     )
     model.fit(
         X_train,
@@ -79,6 +77,15 @@ def train_cat(X_train, y_train, X_valid, y_valid, params, n_estimators=50000):
         verbose=100,
         early_stopping_rounds=200,
     )
+
+    return model
+
+
+def train_logistic(X_train, y_train):
+    model = LogisticRegression(random_state=42, solver="lbfgs")
+    model.fit(X_train, y_train)
+
+    return model
 
 
 def train_model_classification(
@@ -119,9 +126,6 @@ def train_model_classification(
     columns = X.columns if columns is None else columns
     n_splits = folds.n_splits if splits is None else n_folds
     X_test = X_test[columns]
-
-    # to set up scoring parameters
-    metrics_dict = {"auc": {"sklearn_scoring_function": metrics.roc_auc_score}}
 
     result_dict = {}
     if averaging == "usual":
@@ -184,14 +188,10 @@ def train_model_classification(
                 ntree_limit=model.best_ntree_limit,
             )
 
-        if model_type == "sklearn":
-            model = model
-            model.fit(X_train, y_train)
-
+        if model_type == "logistic":
+            model = train_logistic(X_train, y_train)
             y_pred_valid = model.predict(X_valid).reshape(-1)
-            score = metrics_dict[eval_metric]["sklearn_scoring_function"](
-                y_valid, y_pred_valid
-            )
+            score = metrics.roc_auc_score(y_valid, y_pred_valid)
             print(f"Fold {fold_n}. {eval_metric}: {score:.4f}.")
             print("")
 
@@ -206,22 +206,14 @@ def train_model_classification(
         if averaging == "usual":
 
             oof[valid_index] = y_pred_valid.reshape(-1, 1)
-            scores.append(
-                metrics_dict[eval_metric]["sklearn_scoring_function"](
-                    y_valid, y_pred_valid
-                )
-            )
+            scores.append(metrics.roc_auc_score(y_valid, y_pred_valid))
 
             prediction += y_pred.reshape(-1, 1)
 
         elif averaging == "rank":
 
             oof[valid_index] = y_pred_valid.reshape(-1, 1)
-            scores.append(
-                metrics_dict[eval_metric]["sklearn_scoring_function"](
-                    y_valid, y_pred_valid
-                )
-            )
+            scores.append(metrics.roc_auc_score(y_valid, y_pred_valid))
 
             prediction += pd.Series(y_pred).rank().values.reshape(-1, 1)
 
@@ -386,3 +378,20 @@ def train_cat_folds(ds, n_estimators=50000):
     )
 
     return result_dict_cat
+
+
+def train_logistic_folds(ds):
+    n_fold = 5
+    folds = KFold(n_splits=n_fold)
+
+    result_dict_log = train_model_classification(
+        X=ds.X_train,
+        X_test=ds.X_test,
+        y=ds.y_train,
+        params=None,
+        folds=folds,
+        model_type="logistic",
+        averaging="usual",
+    )
+
+    return result_dict_log
