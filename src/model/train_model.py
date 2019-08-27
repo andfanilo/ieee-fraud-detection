@@ -317,20 +317,14 @@ def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
         "max_depth": 13,
         "learning_rate": 0.01,
         "tree_learner": "serial",
-        "reg_alpha": 0.3,
-        "reg_lambda": 0.3,
         "colsample_bytree": 0.7,
+        "subsample": 0.7,
         "subsample_freq": 1,
         "scale_pos_weight": 10,
         "boosting_type": "gbdt",
         "max_bin": 255,
         "verbosity": -1,
         "seed": 1337,
-        "feature_fraction_seed": 1337,
-        "bagging_seed": 1337,
-        "drop_seed": 1337,
-        "data_random_seed": 1337,
-        # "categorical_feature": ds.get_categorical_cols() + ["P_emaildomain_bin", "P_emaildomain_suffix", "R_emaildomain_bin", "R_emaildomain_suffix"]
     }
 
     result_dict_lgb = train_model_classification(
