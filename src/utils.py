@@ -1,3 +1,5 @@
+import os
+import random
 import sys
 from gc import get_referents
 from types import FunctionType, ModuleType
@@ -51,3 +53,11 @@ def printmd(string):
     From https://stackoverflow.com/questions/23271575/printing-bold-colored-etc-text-in-ipython-qtconsole
     """
     display(Markdown(string))
+
+
+def seed_everything(seed=0):
+    """seed to make all processes deterministic
+    """
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)

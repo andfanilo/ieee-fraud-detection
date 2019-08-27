@@ -9,11 +9,12 @@ from src.features.build_features import (
     convert_category_cols_lgb,
 )
 from src.model.train_model import (
-    train_lgb_folds,
-    train_xgb_folds,
     train_cat_folds,
+    train_lgb_folds,
     train_logistic_folds,
+    train_xgb_folds,
 )
+from src.utils import seed_everything
 
 warnings.filterwarnings("ignore")
 
@@ -36,6 +37,8 @@ logger = logging.getLogger(__name__)
     help="Type of model to run",
 )
 def run_experiment(version, model):
+    seed_everything(0)
+
     preprocessor = {"lgb": convert_category_cols_lgb}
     modeller = {
         "xgb": train_xgb_folds,
