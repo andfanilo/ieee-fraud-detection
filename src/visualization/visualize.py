@@ -6,14 +6,30 @@ import plotly.express as px
 import seaborn as sns
 from src.visualization.utils import value_counts, value_counts_byfraud
 
+KDE_LW = 0.8
+
 
 def hist_train_test(X_train, X_test, col, bins):
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15, 4))
 
-    ax1.hist(X_train[col], bins=bins)
+    # ax1.hist(X_train[col], bins=bins)
+    sns.distplot(
+        X_train[col].dropna(),
+        bins=bins,
+        ax=ax1,
+        kde_kws={"color": "k", "lw": KDE_LW},
+        hist_kws={"alpha": 1},
+    )
     ax1.set_title(f"Distribution of {col} on train")
 
-    ax2.hist(X_test[col], bins=bins)
+    # ax2.hist(X_test[col], bins=bins)
+    sns.distplot(
+        X_test[col].dropna(),
+        bins=bins,
+        ax=ax2,
+        kde_kws={"color": "k", "lw": KDE_LW},
+        hist_kws={"alpha": 1},
+    )
     ax2.set_title(f"Distribution of {col} on test")
 
     fig.show()
@@ -22,10 +38,24 @@ def hist_train_test(X_train, X_test, col, bins):
 def hist_isfraud(X_train, col, bins):
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15, 4))
 
-    ax1.hist(X_train[X_train["label"] == 0][col], bins=bins)
+    # ax1.hist(X_train[X_train["label"] == 0][col], bins=bins)
+    sns.distplot(
+        X_train[X_train["label"] == 0][col].dropna(),
+        bins=bins,
+        ax=ax1,
+        kde_kws={"color": "k", "lw": KDE_LW},
+        hist_kws={"alpha": 1},
+    )
     ax1.set_title(f"Distribution of non fraud {col}")
 
-    ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor="orange")
+    # ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor="orange")
+    sns.distplot(
+        X_train[X_train["label"] == 1][col].dropna(),
+        bins=bins,
+        ax=ax2,
+        kde_kws={"color": "k", "lw": KDE_LW},
+        hist_kws={"alpha": 1, "color": "orange"},
+    )
     ax2.set_title(f"Distribution of fraud {col}")
 
     fig.show()

@@ -192,17 +192,17 @@ def train_model_classification(
         if model_type == "logistic":
             # there are nan values in folds, logistic reg doesn't like them
             # let's impute them quickly
-            imp = SimpleImputer(missing_values=np.nan, strategy='mean').fit(X_train)
+            imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
             X_train = imp.transform(X_train)
             X_valid = imp.transform(X_valid)
-            X_test =  imp.transform(X_test)
+            X_test = imp.transform(X_test)
 
             model = train_logistic(X_train, y_train)
             y_pred_valid = model.predict(X_valid).reshape(-1)
             score = metrics.roc_auc_score(y_valid, y_pred_valid)
             print(f"Fold {fold_n}. {eval_metric}: {score:.4f}.")
 
-            y_pred = model.predict_proba(X_test)[:,1]
+            y_pred = model.predict_proba(X_test)[:, 1]
 
         if model_type == "cat":
             model = train_cat(X_train, y_train, X_valid, y_valid, params, n_estimators)
