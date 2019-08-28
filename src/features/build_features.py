@@ -107,6 +107,35 @@ def parse_emails(ds):
     logger.info("Emails were parsed")
 
 
+def check_latest_browser(ds):
+    # https://www.kaggle.com/amirhmi/a-complete-feature-engineering-with-lgbm
+    ds.X_train["lastest_browser"] = np.zeros(ds.X_train.shape[0])
+    ds.X_test["lastest_browser"] = np.zeros(ds.X_test.shape[0])
+
+    for df in [ds.X_train, ds.X_test]:
+        df.loc[df["id_31"] == "samsung browser 7.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "opera 53.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "mobile safari 10.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "google search application 49.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "firefox 60.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "edge 17.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 69.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 67.0 for android", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 63.0 for android", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 63.0 for ios", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 64.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 64.0 for android", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 64.0 for ios", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 65.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 65.0 for android", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 65.0 for ios", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 66.0", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 66.0 for android", "lastest_browser"] = 1
+        df.loc[df["id_31"] == "chrome 66.0 for ios", "lastest_browser"] = 1
+
+    logger.info("Latest browser versions were checked")
+
+
 def map_emails(ds):
     # https://www.kaggle.com/c/ieee-fraud-detection/discussion/100499#latest_df-579654
     emails = {
@@ -186,6 +215,13 @@ def map_emails(ds):
         ds.X_test[c + "_suffix"] = ds.X_test[c + "_suffix"].map(
             lambda x: x if str(x) not in us_emails else "us"
         )
+
+    ds.X_train["is_proton_mail"] = (ds.X_train["P_emaildomain"] == "protonmail.com") | (
+        ds.X_train["R_emaildomain"] == "protonmail.com"
+    )
+    ds.X_test["is_proton_mail"] = (ds.X_test["P_emaildomain"] == "protonmail.com") | (
+        ds.X_test["R_emaildomain"] == "protonmail.com"
+    )
 
     logger.info("Emails were mapped")
 
