@@ -18,7 +18,9 @@ from sklearn.model_selection import (
     TimeSeriesSplit,
     train_test_split,
 )
+
 from src.model.utils import eval_auc, group_mean_log_mae
+from src.model.validation_split import TimeSeriesSplit
 from src.utils import print_colored_green
 
 logger = logging.getLogger(__name__)
@@ -384,7 +386,8 @@ def train_cat_folds(ds, n_estimators=50000):
 
 def train_logistic_folds(ds):
     n_fold = 5
-    folds = KFold(n_splits=n_fold)
+    # folds = KFold(n_splits=n_fold)
+    folds = TimeSeriesSplit(n_splits=n_fold)
 
     result_dict_log = train_model_classification(
         X=ds.X_train,

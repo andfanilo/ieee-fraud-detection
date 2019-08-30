@@ -30,8 +30,7 @@ The following commands are made as pre-commit hooks.
 
 ```
 seed-isort-config --application-directories src/
-isort -rc src/
-black src/
+isort -rc src/ && black src/
 ```
 
 `pre-commit install` to install pre-commit into your git hooks.

@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
+
 from src.features.reduce_dimensions import VestaReducer
 from src.features.utils import calc_smooth_mean
 
