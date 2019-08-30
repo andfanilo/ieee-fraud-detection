@@ -198,7 +198,7 @@ def train_model_classification(
             X_test = imp.transform(X_test)
 
             model = train_logistic(X_train, y_train)
-            y_pred_valid = model.predict(X_valid).reshape(-1)
+            y_pred_valid = model.predict_proba(X_valid)[:, 1]
             score = metrics.roc_auc_score(y_valid, y_pred_valid)
             print(f"Fold {fold_n}. {eval_metric}: {score:.4f}.")
 
