@@ -2,8 +2,13 @@ import matplotlib.pylab as pl
 import numpy as np
 import pandas as pd
 import shap
-
-shap.initjs()
+from yellowbrick.classifier import (
+    ROCAUC,
+    ClassificationReport,
+    ConfusionMatrix,
+    DiscriminationThreshold,
+    PrecisionRecallCurve,
+)
 
 
 class TreeVisualizer:
@@ -12,6 +17,7 @@ class TreeVisualizer:
         interactions takes a couple minutes since SHAP interaction values take a factor of 2 * # features
         more time than SHAP values to compute
         """
+        shap.initjs()
         self.X = X
         self.interactions = False
         self.explainer = shap.TreeExplainer(clf)
@@ -93,3 +99,28 @@ class TreeVisualizer:
 
     def force_plot(self):
         return shap.force_plot(self.explainer.expected_value, self.shap_values, self.X)
+
+
+def plot_classification_report(model, X_valid, y_valid):
+    visualizer = ClassificationReport(model, support=True, is_fitted=True)
+    visualizer.score(X_valid, y_valid)
+    visualizer.poof()
+
+
+def plot_confusion_matrix(model, X_valid, y_valid):
+    visualizer = ConfusionMatrix(model, is_fitted=True)
+    visualizer.score(X_valid, y_valid)
+    visualizer.poof()
+
+
+def plot_rocauc(model, X_valid, y_valid):
+    visualizer = ROCAUC(model, is_fitted=True)
+    visualizer.score(X_valid, y_valid)
+    visualizer.poof()
+
+
+def plot_pr(model, X_train, y_train, X_valid, y_valid):
+    visualizer = PrecisionRecallCurve(model)
+    visualizer.fit(X_train, y_train)
+    visualizer.score(X_valid, y_valid)
+    visualizer.poof()

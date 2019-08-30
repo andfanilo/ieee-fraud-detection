@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from catboost import CatBoostClassifier
+from imblearn.over_sampling import ADASYN, SMOTE
 from sklearn import metrics
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -198,6 +199,9 @@ def train_model_classification(
             X_train = imp.transform(X_train)
             X_valid = imp.transform(X_valid)
             X_test = imp.transform(X_test)
+
+            # SMOTE on each training fold
+            X_train, y_train = SMOTE(random_state=0).fit_sample(X_train, y_train)
 
             model = train_logistic(X_train, y_train)
             y_pred_valid = model.predict_proba(X_valid)[:, 1]

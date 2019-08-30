@@ -10,10 +10,12 @@ impyute
 interpret
 isort
 fancyimpute
+featuretools
 jupyter
 jupyterlab
 kaggle
 keras
+lens
 lightgbm
 line-profiler
 missingno
@@ -39,4 +41,6 @@ termcolor
 tqdm
 umap-learn
 vega
+vtreat
 xgboost
+yellowbrick
