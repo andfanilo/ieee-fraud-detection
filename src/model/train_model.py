@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from catboost import CatBoostClassifier
+from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.over_sampling import ADASYN, SMOTE
 from sklearn import metrics
 from sklearn.impute import SimpleImputer
@@ -90,6 +91,16 @@ def train_logistic(X_train, y_train):
     model.fit(X_train, y_train)
 
     return model
+
+
+def preprocess_fold(X_train, y_train, X_valid, y_valid, X_test):
+    # SMOTE on each training fold
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
+    X_train = imp.transform(X_train)
+    X_valid = imp.transform(X_valid)
+    X_test = imp.transform(X_test)
+    X_train, y_train = SMOTEENN(random_state=0).fit_sample(X_train, y_train)
+    return X_train, y_train, X_valid, y_valid, X_test
 
 
 def train_model_classification(
@@ -193,15 +204,9 @@ def train_model_classification(
             )
 
         if model_type == "logistic":
-            # there are nan values in folds, logistic reg doesn't like them
-            # let's impute them quickly
-            imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
-            X_train = imp.transform(X_train)
-            X_valid = imp.transform(X_valid)
-            X_test = imp.transform(X_test)
-
-            # SMOTE on each training fold
-            X_train, y_train = SMOTE(random_state=0).fit_sample(X_train, y_train)
+            X_train, y_train, X_valid, y_valid, X_test = preprocess_fold(
+                X_train, y_train, X_valid, y_valid, X_test
+            )
 
             model = train_logistic(X_train, y_train)
             y_pred_valid = model.predict_proba(X_valid)[:, 1]
@@ -282,7 +287,7 @@ def train_model_classification(
 
 def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
     n_fold = 5
-    folds = KFold(n_splits=5)
+    folds = TimeSeriesSplit(n_splits=n_fold)
 
     params = {
         "eta": 0.05,
@@ -318,9 +323,7 @@ def train_xgb_folds(ds, n_estimators=50000, n_thread=-1):
 
 def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
     n_fold = 5
-    folds = KFold(n_splits=n_fold)
-    # folds = TimeSeriesSplit(n_splits=n_fold)
-    # folds = StratifiedKFold(n_splits=n_fold, random_state=1337)
+    folds = TimeSeriesSplit(n_splits=n_fold)
 
     params = {
         "num_leaves": 2 ** 8,
@@ -361,7 +364,7 @@ def train_lgb_folds(ds, n_estimators=50000, n_jobs=-1):
 
 def train_cat_folds(ds, n_estimators=50000):
     n_fold = 5
-    folds = KFold(n_splits=n_fold)
+    folds = TimeSeriesSplit(n_splits=n_fold)
 
     params = {
         "learning_rate": 0.1,
@@ -390,7 +393,6 @@ def train_cat_folds(ds, n_estimators=50000):
 
 def train_logistic_folds(ds):
     n_fold = 5
-    # folds = KFold(n_splits=n_fold)
     folds = TimeSeriesSplit(n_splits=n_fold)
 
     result_dict_log = train_model_classification(
