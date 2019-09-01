@@ -22,7 +22,7 @@ from sklearn.model_selection import (
 )
 
 from src.model.utils import eval_auc, group_mean_log_mae
-from src.model.validation_split import TimeSeriesSplit
+from src.model.split import TimeSeriesSplit
 from src.utils import print_colored_green
 
 logger = logging.getLogger(__name__)
@@ -94,12 +94,11 @@ def train_logistic(X_train, y_train):
 
 
 def preprocess_fold(X_train, y_train, X_valid, y_valid, X_test):
-    # SMOTE on each training fold
     imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
     X_train = imp.transform(X_train)
     X_valid = imp.transform(X_valid)
     X_test = imp.transform(X_test)
-    X_train, y_train = SMOTEENN(random_state=0).fit_sample(X_train, y_train)
+    # X_train, y_train = SMOTEENN(random_state=0).fit_sample(X_train, y_train)
     return X_train, y_train, X_valid, y_valid, X_test
 
 

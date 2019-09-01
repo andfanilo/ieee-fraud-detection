@@ -1,0 +1,18 @@
+{
+  "logistic_test": {
+    "classifier": "logistic",
+    "params": {},
+    "save_models": false,
+    "save_predictions": false
+  },
+  "logistic": {
+    "classifier": "logistic",
+    "params": {},
+    "save_models": true,
+    "save_predictions": true
+  },
+  "xgb": {},
+  "xgb_test": {},
+  "lgb": {},
+  "lgb_test": {}
+}

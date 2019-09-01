@@ -5,8 +5,18 @@ import numpy as np
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import indexable
 from sklearn.utils.validation import _num_samples
+from sklearn.impute import SimpleImputer
+
 
 LOGGER = logging.getLogger(__name__)
+
+
+def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
+    X_train = imp.transform(X_train)
+    X_valid = imp.transform(X_valid)
+    X_test = imp.transform(X_test)
+    return X_train, y_train, X_valid, y_valid, X_test
 
 
 class TimeSeriesSplit(_BaseKFold):  # pylint: disable=abstract-method

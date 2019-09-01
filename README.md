@@ -1,8 +1,6 @@
 # IEEE Fraud Detection
 
-Can you detect fraud from customer transactions ?
-
-[Link](https://www.kaggle.com/c/ieee-fraud-detection/overview)
+A full Python project for [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection/overview)
 
 ## Prerequisites
 
@@ -24,14 +22,20 @@ pip install --editable .
 
 Then launch jupyter notebook with `jupyter notebook` or lab with `jupyter lab`.
 
-## pre-commit formatting code
+## Formatting src code
 
-The following commands are made as pre-commit hooks.
+The following commands will sort imports and apply black formatting to code ine the `src/` folder.
+
+You may need to run in admin mode.
 
 ```
 seed-isort-config --application-directories src/
 isort -rc src/ && black src/
 ```
+
+###### Precommit 
+
+The following didn't work for me but you can try eventually :
 
 `pre-commit install` to install pre-commit into your git hooks.
 
@@ -57,20 +61,20 @@ You should now be able to launch `run_experiment --version=30000` and `run_exper
 
 #### Run full pipeline
 
-XGB run : `run_experiment --version=30000 ---model=xgb`
+Choose a key in `conf.json` to run, example :
 
-LGB run : `run_experiment --version=30000 ---model=lgb`
+XGB run with dataset of 30000 rows: `run_experiment --version=30000 ---key=xgb`
 
-CatBoost run : `run_experiment --version=30000 ---model=cat`
+LGB run with full dataset : `run_experiment --key=lgb`
 
 ```
 (ieee-fraud-detection) λ run_experiment --help
 Usage: run_experiment [OPTIONS]
 
 Options:
-  --version TEXT                Dataset version to load
-  --model [simple|xgb|lgb|cat]  Type of model to run
-  --help                        Show this message and exit.
+  --version TEXT  Dataset version to load
+  --key TEXT      Experiment to run, see keys in conf.json file
+  --help          Show this message and exit.
 ```
 
 ## Kaggle API credentials
@@ -94,7 +98,7 @@ kaggle competitions submit -c ieee-fraud-detection -f data/submissions/sample_su
     │   ├── external       <- Data from third party sources.
     │   ├── interim        <- Intermediate data that has been transformed.
     │   ├── processed      <- The final, canonical data sets for modeling.
-    │   ├── submissions    <- All predictions to reuse
+    │   ├── submissions    <- All predictions to submit
     │   └── raw            <- The original, immutable data dump.
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
