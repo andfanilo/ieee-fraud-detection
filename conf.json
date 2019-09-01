@@ -11,8 +11,65 @@
     "save_models": true,
     "save_predictions": true
   },
-  "xgb": {},
-  "xgb_test": {},
-  "lgb": {},
-  "lgb_test": {}
+  "xgb_test": {
+    "classifier": "xgb",
+    "params": {},
+    "save_models": false,
+    "save_predictions": false
+  },
+  "xgb": {
+    "classifier": "xgb",
+    "params": {},
+    "save_models": true,
+    "save_predictions": true
+  },
+  "lgb_test": {
+    "classifier": "lgb",
+    "params": {
+      "n_estimators": 500,
+      "num_leaves": 256,
+      "min_child_samples": 79,
+      "objective": "binary",
+      "metric": "auc",
+      "max_depth": 13,
+      "learning_rate": 0.01,
+      "tree_learner": "serial",
+      "colsample_bytree": 0.7,
+      "subsample": 0.7,
+      "subsample_freq": 1,
+      "scale_pos_weight": 10,
+      "boosting_type": "gbdt",
+      "max_bin": 255,
+      "verbosity": -1,
+      "seed": 1337,
+      "n_jobs": 1
+    },
+    "save_models": false,
+    "save_predictions": false
+  },
+  "lgb": {
+    "classifier": "lgb",
+    "params": {
+      "n_estimators": 50000,
+      "early_stopping_rounds": 200,
+      "num_leaves": 256,
+      "min_child_samples": 79,
+      "objective": "binary",
+      "metric": "auc",
+      "max_depth": 13,
+      "learning_rate": 0.01,
+      "tree_learner": "serial",
+      "colsample_bytree": 0.7,
+      "subsample": 0.7,
+      "subsample_freq": 1,
+      "scale_pos_weight": 10,
+      "boosting_type": "gbdt",
+      "max_bin": 255,
+      "verbosity": -1,
+      "seed": 1337,
+      "n_jobs": -1
+    },
+    "save_models": false,
+    "save_predictions": false
+  }
 }

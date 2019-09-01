@@ -14,7 +14,7 @@ from src.features.build_features import (
     convert_category_cols_lgb,
 )
 from src.model.split import TimeSeriesSplit, impute_mean
-from src.model.train import run_train_predict, clf_logistic
+from src.model.train import run_train_predict, clf_logistic, clf_lgb
 from src.model.utils import save_model
 
 from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
@@ -26,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
-    filename="./data/submissions/latest_run.log",
+    # filename="./data/submissions/latest_run.log",
 )
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ def run_experiment(version, key):
 
     # Predefine functions
     preprocessors = {"lgb": convert_category_cols_lgb}
-    preprocessors_fold = {"logistic": impute_mean}
-    modellers = {"logistic": clf_logistic}
+    preprocessors_fold = {"logistic": impute_mean, "lgb": None}
+    modellers = {"logistic": clf_logistic, "lgb": clf_lgb}
 
     # Read JSON conf for parameters
     conf = read_configuration(key)

@@ -25,8 +25,25 @@ def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
     y_pred_valid = model.predict_proba(X_valid)[:, 1]
     score = metrics.roc_auc_score(y_valid, y_pred_valid)
     print(f"Fold result : AUC {score:.4f}.")
-    y_pred = model.predict_proba(X_test)[:, 1]
 
+    y_pred = model.predict_proba(X_test)[:, 1]
+    return model, y_pred_valid, y_pred
+
+
+def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
+    model = lgb.LGBMClassifier(**params)
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=[(X_train, y_train), (X_valid, y_valid)],
+        eval_metric=eval_auc,
+        verbose=100,
+    )
+
+    y_pred_valid = model.predict_proba(X_valid, num_iteration=model.best_iteration_)[
+        :, 1
+    ]
+    y_pred = model.predict_proba(X_test, num_iteration=model.best_iteration_)[:, 1]
     return model, y_pred_valid, y_pred
 
 
@@ -92,11 +109,11 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
             prediction += pd.Series(y_pred).rank().values.reshape(-1, 1)
 
     prediction /= n_splits
+    mean_score = np.mean(scores)
+    std_score = np.std(scores)
 
-    print_colored_green(
-        f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}."
-    )
-    logger.info(f"CV mean score: {np.mean(scores):.4f}, std: {np.std(scores):.4f}.")
+    logger.info(f"CV mean score: {mean_score:.4f}, std: {std_score:.4f}.")
+    print_colored_green(f"CV mean score: {mean_score:.4f}, std: {std_score:.4f}.")
 
     result_dict["oof"] = oof
     result_dict["prediction"] = prediction
