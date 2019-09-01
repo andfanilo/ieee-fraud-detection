@@ -2,11 +2,10 @@ import logging
 from typing import Optional
 
 import numpy as np
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import indexable
 from sklearn.utils.validation import _num_samples
-from sklearn.impute import SimpleImputer
-
 
 LOGGER = logging.getLogger(__name__)
 

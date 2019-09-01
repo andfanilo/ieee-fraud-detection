@@ -13,15 +13,39 @@
   },
   "xgb_test": {
     "classifier": "xgb",
-    "params": {},
+    "params": {
+      "eta": 0.05,
+      "max_depth": 9,
+      "objective": "binary:logistic",
+      "eval_metric": "auc",
+      "gamma": 0.1,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "scale_pos_weight": 10,
+      "verbosity": 0,
+      "random_state": 1337,
+      "nthread": 1
+  },
     "save_models": false,
     "save_predictions": false
   },
   "xgb": {
     "classifier": "xgb",
-    "params": {},
-    "save_models": true,
-    "save_predictions": true
+    "params": {
+      "eta": 0.05,
+      "max_depth": 9,
+      "objective": "binary:logistic",
+      "eval_metric": "auc",
+      "gamma": 0.1,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "scale_pos_weight": 10,
+      "verbosity": 0,
+      "random_state": 1337,
+      "nthread": -1
+  },
+    "save_models": false,
+    "save_predictions": false
   },
   "lgb_test": {
     "classifier": "lgb",

@@ -21,8 +21,8 @@ from sklearn.model_selection import (
     train_test_split,
 )
 
-from src.model.utils import eval_auc, group_mean_log_mae
 from src.model.split import TimeSeriesSplit
+from src.model.utils import eval_auc, group_mean_log_mae
 from src.utils import print_colored_green
 
 logger = logging.getLogger(__name__)

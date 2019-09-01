@@ -1,23 +1,22 @@
-import os
 import gc
 import logging
+import os
 import warnings
 from datetime import datetime
 
 import click
+from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
 
 from src.config import read_configuration, write_params
-from src.utils import seed_everything, get_root_dir
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import (
     build_processed_dataset,
     convert_category_cols_lgb,
 )
 from src.model.split import TimeSeriesSplit, impute_mean
-from src.model.train import run_train_predict, clf_logistic, clf_lgb
+from src.model.train import clf_lgb, clf_logistic, clf_xgb, run_train_predict
 from src.model.utils import save_model
-
-from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
+from src.utils import get_root_dir, seed_everything
 
 warnings.filterwarnings("ignore")
 
@@ -45,8 +44,8 @@ def run_experiment(version, key):
 
     # Predefine functions
     preprocessors = {"lgb": convert_category_cols_lgb}
-    preprocessors_fold = {"logistic": impute_mean, "lgb": None}
-    modellers = {"logistic": clf_logistic, "lgb": clf_lgb}
+    preprocessors_fold = {"logistic": impute_mean, "lgb": None, "xgb": None}
+    modellers = {"logistic": clf_logistic, "lgb": clf_lgb, "xgb": clf_xgb}
 
     # Read JSON conf for parameters
     conf = read_configuration(key)

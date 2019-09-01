@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 import time
 
 import lightgbm as lgb
@@ -7,13 +7,12 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from catboost import CatBoostClassifier
-
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
 
-from src.model.utils import eval_auc, group_mean_log_mae
 from src.model.split import TimeSeriesSplit
-from src.utils import print_colored_green, get_root_dir
+from src.model.utils import eval_auc_lgb, eval_auc_xgb
+from src.utils import get_root_dir, print_colored_green
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +29,38 @@ def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
     return model, y_pred_valid, y_pred
 
 
+def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
+    columns = X_train.columns
+    train_data = xgb.DMatrix(data=X_train, label=y_train, feature_names=columns)
+    valid_data = xgb.DMatrix(data=X_valid, label=y_valid, feature_names=columns)
+
+    watchlist = [(train_data, "train"), (valid_data, "valid_data")]
+    model = xgb.train(
+        params=params,
+        dtrain=train_data,
+        num_boost_round=500,
+        evals=watchlist,
+        # feval=eval_auc_xgb,
+        early_stopping_rounds=200,
+        verbose_eval=100,
+    )
+    y_pred_valid = model.predict(
+        xgb.DMatrix(X_valid, feature_names=columns), ntree_limit=model.best_ntree_limit
+    )
+    y_pred = model.predict(
+        xgb.DMatrix(X_test, feature_names=columns), ntree_limit=model.best_ntree_limit
+    )
+
+    return model, y_pred_valid, y_pred
+
+
 def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
     model = lgb.LGBMClassifier(**params)
     model.fit(
         X_train,
         y_train,
         eval_set=[(X_train, y_train), (X_valid, y_valid)],
-        eval_metric=eval_auc,
+        # eval_metric=eval_auc_lgb,
         verbose=100,
     )
 
@@ -48,6 +72,8 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="usual"):
+    """Run clf function on ds with given folds
+    """
     X = ds.X_train
     X_test = ds.X_test
     y = ds.y_train
