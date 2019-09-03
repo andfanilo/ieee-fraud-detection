@@ -3,6 +3,7 @@ beautifulsoup4
 black
 catboost
 git+https://github.com/scikit-learn-contrib/categorical-encoding.git#egg=category_encoders # Need to use CountEncoder from category_encoders before it's officially released
+cerberus
 click
 colorama
 imbalanced-learn

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/app.py",
             "console": "integratedTerminal",
-            "args" : ["--version", "30000"]
+            "args" : ["--version", "30000", "--model", "logistic"]
         }
     ]
 }
