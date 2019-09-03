@@ -14,6 +14,7 @@
   "xgb_test": {
     "classifier": "xgb",
     "params": {
+      "n_estimators": 500,
       "eta": 0.05,
       "max_depth": 9,
       "objective": "binary:logistic",
@@ -32,6 +33,8 @@
   "xgb": {
     "classifier": "xgb",
     "params": {
+      "n_estimators": 50000,
+      "early_stopping_rounds": 200,
       "eta": 0.05,
       "max_depth": 9,
       "objective": "binary:logistic",

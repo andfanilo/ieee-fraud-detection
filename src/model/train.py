@@ -38,10 +38,8 @@ def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
     model = xgb.train(
         params=params,
         dtrain=train_data,
-        num_boost_round=500,
         evals=watchlist,
         # feval=eval_auc_xgb,
-        early_stopping_rounds=200,
         verbose_eval=100,
     )
     y_pred_valid = model.predict(
