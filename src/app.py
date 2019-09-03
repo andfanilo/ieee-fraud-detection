@@ -14,7 +14,13 @@ from src.features.build_features import (
     convert_category_cols_lgb,
 )
 from src.model.split import TimeSeriesSplit, impute_mean
-from src.model.train import clf_lgb, clf_logistic, clf_xgb, run_train_predict
+from src.model.train import (
+    clf_lgb,
+    clf_logistic,
+    clf_xgb,
+    clf_catboost,
+    run_train_predict,
+)
 from src.model.utils import save_model
 from src.utils import get_root_dir, seed_everything
 
@@ -32,20 +38,25 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--version", type=str, default="", help="Dataset version to load")
-@click.option(
-    "--key",
-    type=str,
-    default="lgb",
-    help="Experiment to run, see keys in conf.json file",
-)
+@click.option("--key", type=str, help="Experiment to run, see keys in conf.json file")
 def run_experiment(version, key):
     time_experiment = datetime.now().strftime("%m%d%Y_%H%M")
     seed_everything(0)
 
     # Predefine functions
     preprocessors = {"lgb": convert_category_cols_lgb}
-    preprocessors_fold = {"logistic": impute_mean, "lgb": None, "xgb": None}
-    modellers = {"logistic": clf_logistic, "lgb": clf_lgb, "xgb": clf_xgb}
+    preprocessors_fold = {
+        "logistic": impute_mean,
+        "lgb": None,
+        "xgb": None,
+        "catboost": None,
+    }
+    modellers = {
+        "logistic": clf_logistic,
+        "lgb": clf_lgb,
+        "xgb": clf_xgb,
+        "catboost": clf_catboost,
+    }
 
     # Read JSON conf for parameters
     conf = read_configuration(key)

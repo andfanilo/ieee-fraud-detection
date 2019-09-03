@@ -71,6 +71,23 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
     return model, y_pred_valid, y_pred
 
 
+def clf_catboost(X_train, y_train, X_valid, y_valid, X_test, params):
+    model = CatBoostClassifier(**params)
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=(X_valid, y_valid),
+        cat_features=[],
+        verbose=100,
+        early_stopping_rounds=200,
+    )
+
+    y_pred_valid = model.predict_proba(X_valid)[:, 1]
+    y_pred = model.predict_proba(X_test)[:, 1]
+
+    return model, y_pred_valid, y_pred
+
+
 def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="usual"):
     """Run clf function on ds with given folds
     """

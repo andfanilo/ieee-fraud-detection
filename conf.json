@@ -25,7 +25,7 @@
       "verbosity": 0,
       "random_state": 1337,
       "nthread": 1
-  },
+    },
     "save_models": false,
     "save_predictions": false
   },
@@ -43,7 +43,7 @@
       "verbosity": 0,
       "random_state": 1337,
       "nthread": -1
-  },
+    },
     "save_models": false,
     "save_predictions": false
   },
@@ -92,6 +92,34 @@
       "verbosity": -1,
       "seed": 1337,
       "n_jobs": -1
+    },
+    "save_models": false,
+    "save_predictions": false
+  },
+  "cat_test": {
+    "classifier": "catboost",
+    "params": {
+      "iterations": 50,
+      "learning_rate": 0.1,
+      "depth": 15,
+      "eval_metric": "AUC",
+      "loss_function": "Logloss",
+      "random_seed": 1337,
+      "use_best_model": true
+    },
+    "save_models": false,
+    "save_predictions": false
+  },
+  "cat": {
+    "classifier": "catboost",
+    "params": {
+      "iterations": 50,
+      "learning_rate": 0.1,
+      "depth": 15,
+      "eval_metric": "AUC",
+      "loss_function": "Logloss",
+      "random_seed": 1337,
+      "use_best_model": true
     },
     "save_models": false,
     "save_predictions": false
