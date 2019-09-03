@@ -20,7 +20,6 @@ from sklearn.model_selection import (
     TimeSeriesSplit,
     train_test_split,
 )
-
 from src.model.utils import eval_auc, group_mean_log_mae
 from src.model.validation_split import TimeSeriesSplit
 from src.utils import print_colored_green

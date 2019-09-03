@@ -3,15 +3,18 @@ repos:
     rev: v1.9.2
     hooks:
     -   id: seed-isort-config
+        name: configure-isort
         args: [--application-directories=src/] 
 -   repo: https://github.com/pre-commit/mirrors-isort
     rev: v4.3.20
     hooks:
     -   id: isort
+        name: isort
         args: [-rc, src/]
 -   repo: https://github.com/psf/black
     rev: stable
     hooks:
     -   id: black
+        name: black
         args: [src/]
         language_version: python3.6
