@@ -38,6 +38,7 @@ shap
 statsmodels
 tensorflow
 termcolor
+tpot
 tqdm
 umap-learn
 vega
