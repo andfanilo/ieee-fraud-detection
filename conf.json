@@ -47,8 +47,8 @@
       "random_state": 1337,
       "nthread": -1
     },
-    "save_models": false,
-    "save_predictions": false
+    "save_models": true,
+    "save_predictions": true
   },
   "lgb_test": {
     "classifier": "lgb",
@@ -96,8 +96,8 @@
       "seed": 1337,
       "n_jobs": -1
     },
-    "save_models": false,
-    "save_predictions": false
+    "save_models": true,
+    "save_predictions": true
   },
   "cat_test": {
     "classifier": "catboost",
@@ -124,7 +124,7 @@
       "random_seed": 1337,
       "use_best_model": true
     },
-    "save_models": false,
-    "save_predictions": false
+    "save_models": true,
+    "save_predictions": true
   }
 }

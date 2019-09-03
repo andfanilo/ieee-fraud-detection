@@ -33,13 +33,19 @@ seed-isort-config --application-directories src/
 isort -rc src/ && black src/
 ```
 
-###### Precommit 
+###### Precommit hooks
 
-The following didn't work for me but you can try eventually :
+The previous commands are installed in pre-commit hooks.
 
 `pre-commit install` to install pre-commit into your git hooks.
 
-If you want to manually run all pre-commit hooks on a repository, run `pre-commit run --all-files`.
+`pre-commit run` if you want to manually run pre-commit hooks on staged files.
+
+`pre-commit run --all-files` if you want to manually run all pre-commit hooks on a repository.
+
+`pre-commit uninstall` will remove hooks if needed.
+
+`git commit -n ...` will skip hooks verification.
 
 ## Run experiments
 
@@ -65,7 +71,7 @@ Choose a key in `conf.json` to run, example :
 
 XGB run with dataset of 30000 rows: `run_experiment --version=30000 ---key=xgb`
 
-LGB run with full dataset : `run_experiment --key=lgb`
+LGB test run with full dataset : `run_experiment --key=lgb_test`
 
 ```
 (ieee-fraud-detection) λ run_experiment --help
