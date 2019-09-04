@@ -15,6 +15,7 @@
     "classifier": "xgb",
     "params": {
       "n_estimators": 500,
+      "early_stopping_rounds": 20,
       "eta": 0.05,
       "max_depth": 9,
       "objective": "binary:logistic",
@@ -54,6 +55,7 @@
     "classifier": "lgb",
     "params": {
       "n_estimators": 500,
+      "early_stopping_rounds": 20,
       "num_leaves": 256,
       "min_child_samples": 79,
       "objective": "binary",
@@ -102,9 +104,10 @@
   "cat_test": {
     "classifier": "catboost",
     "params": {
-      "iterations": 50,
-      "learning_rate": 0.1,
-      "depth": 15,
+      "iterations": 500,
+      "early_stopping_rounds": 20,
+      "learning_rate": 0.3,
+      "depth": 5,
       "eval_metric": "AUC",
       "loss_function": "Logloss",
       "random_seed": 1337,
@@ -116,9 +119,10 @@
   "cat": {
     "classifier": "catboost",
     "params": {
-      "iterations": 50,
-      "learning_rate": 0.1,
-      "depth": 15,
+      "iterations": 50000,
+      "early_stopping_rounds": 200,
+      "learning_rate": 0.05,
+      "depth": 13,
       "eval_metric": "AUC",
       "loss_function": "Logloss",
       "random_seed": 1337,

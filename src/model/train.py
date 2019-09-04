@@ -71,12 +71,7 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
 def clf_catboost(X_train, y_train, X_valid, y_valid, X_test, params):
     model = CatBoostClassifier(**params)
     model.fit(
-        X_train,
-        y_train,
-        eval_set=(X_valid, y_valid),
-        cat_features=[],
-        verbose=100,
-        early_stopping_rounds=200,
+        X_train, y_train, eval_set=(X_valid, y_valid), cat_features=[], verbose=100
     )
 
     y_pred_valid = model.predict_proba(X_valid)[:, 1]
