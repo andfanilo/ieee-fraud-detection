@@ -562,8 +562,9 @@ class Dataset:
         )
 
         train = train_transaction.merge(
-            train_identity, how="left", left_index=True, right_index=True
+            train_identity, how="left", left_index=True, right_index=True, indicator='has_identity'
         )
+        train['has_identity'] = train['has_identity'].map({'left_only': 0, 'both': 1})
 
         train = reduce_mem_usage(train)
 
@@ -585,8 +586,9 @@ class Dataset:
             )
 
             test = test_transaction.merge(
-                test_identity, how="left", left_index=True, right_index=True
+                test_identity, how="left", left_index=True, right_index=True, indicator='has_identity'
             )
+            test['has_identity'] = test['has_identity'].map({'left_only': 0, 'both': 1})
 
             test = reduce_mem_usage(test)
             del test_transaction, test_identity
