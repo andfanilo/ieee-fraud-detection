@@ -15,3 +15,9 @@ def calc_smooth_mean(df, by, on, m):
 
     # Replace each value by the according smoothed mean
     return df[by].map(smooth)
+
+
+def convert_category_cols_lgb(ds):
+    for col in ds.categorical_cols:
+        ds.X_train[col] = ds.X_train[col].fillna(-1).astype("category")
+        ds.X_test[col] = ds.X_test[col].fillna(-1).astype("category")

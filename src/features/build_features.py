@@ -10,12 +10,17 @@ from src.features.utils import calc_smooth_mean
 logger = logging.getLogger(__name__)
 
 
+########################### GENERAL CLEANING
+
+
 def clean_inf_nan(ds):
     # by https://www.kaggle.com/dimartinot
     # inf_cols_train = ds.X_train.columns.to_series()[np.isinf(ds.X_train).any()]
     # inf_cols_test = ds.X_test.columns.to_series()[np.isinf(ds.X_test).any()]
     ds.X_train.replace([np.inf, -np.inf], np.nan, inplace=True)
     ds.X_test.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    logger.info("Infinites were cleaned")
 
     # logger.info("Following columns contained infinity values that were replaced by NAN")
     # logger.info(", ".join(list(set(inf_cols_train + inf_cols_test))))
@@ -39,80 +44,17 @@ def clean_noise_cards(ds, valid_counts=2):
     logger.info(", ".join([str(card) for card in valid_card]))
 
 
-def transform_amount(ds):
-    # Let's add some kind of client uID based on cardID ad addr columns
-    # The value will be very specific for each client so we need to remove it
-    # from final feature. But we can use it for aggregations.
+########################### IDENTITY COLUMNS PROCESSING
+
+
+def process_identity(ds):
     for df in [ds.X_train, ds.X_test]:
-        df["uid"] = df["card1"].astype(str) + "_" + df["card2"].astype(str)
-        df["uid2"] = (
-            df["uid"].astype(str)
-            + "_"
-            + df["card3"].astype(str)
-            + "_"
-            + df["card5"].astype(str)
-        )
-        df["uid3"] = (
-            df["uid2"].astype(str)
-            + "_"
-            + df["addr1"].astype(str)
-            + "_"
-            + df["addr2"].astype(str)
-        )
-        df["TransactionAmt"] = np.log1p(df["TransactionAmt"])
+        # id_01 to id_11 are numeric
+        df["id_02_log"] = np.log(df["id_02"])
 
-    # Check if the Transaction Amount is common or not (we can use freq encoding here)
-    # In our dialog with a model we are telling to trust or not to these values
-    ds.X_train["TransactionAmt_check"] = np.where(
-        ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
-    )
-    ds.X_test["TransactionAmt_check"] = np.where(
-        ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
-    )
-
-
-def parse_emails(ds):
-    p = "P_emaildomain"
-    r = "R_emaildomain"
-    unknown = "email_not_provided"
-
-    for df in [ds.X_train, ds.X_test]:
-        df[p] = df[p].fillna(unknown)
-        df[r] = df[r].fillna(unknown)
-        df["email_check"] = np.where((df[p] == df[r]) & (df[p] != unknown), 1, 0)
-
-        df["DeviceInfo"] = df["DeviceInfo"].fillna("unknown_device").str.lower()
-        df["DeviceInfo_device"] = df["DeviceInfo"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-        df["DeviceInfo_version"] = df["DeviceInfo"].apply(
-            lambda x: "".join([i for i in x if i.isnumeric()])
-        )
-
-        ########################### Device info 2
-        df["id_30"] = df["id_30"].fillna("unknown_device").str.lower()
-        df["id_30_device"] = df["id_30"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-        df["id_30_version"] = df["id_30"].apply(
-            lambda x: "".join([i for i in x if i.isnumeric()])
-        )
-
-        ########################### Browser
-        df["id_31"] = df["id_31"].fillna("unknown_device").str.lower()
-        df["id_31_device"] = df["id_31"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-
-    logger.info("Emails were parsed")
-
-
-def check_latest_browser(ds):
-    # https://www.kaggle.com/amirhmi/a-complete-feature-engineering-with-lgbm
-    ds.X_train["lastest_browser"] = np.zeros(ds.X_train.shape[0])
-    ds.X_test["lastest_browser"] = np.zeros(ds.X_test.shape[0])
-
-    for df in [ds.X_train, ds.X_test]:
+        # check latest browser with id_31
+        # https://www.kaggle.com/amirhmi/a-complete-feature-engineering-with-lgbm
+        df["lastest_browser"] = np.zeros(df.shape[0])
         df.loc[df["id_31"] == "samsung browser 7.0", "lastest_browser"] = 1
         df.loc[df["id_31"] == "opera 53.0", "lastest_browser"] = 1
         df.loc[df["id_31"] == "mobile safari 10.0", "lastest_browser"] = 1
@@ -133,97 +75,7 @@ def check_latest_browser(ds):
         df.loc[df["id_31"] == "chrome 66.0 for android", "lastest_browser"] = 1
         df.loc[df["id_31"] == "chrome 66.0 for ios", "lastest_browser"] = 1
 
-    logger.info("Latest browser versions were checked")
-
-
-def map_emails(ds):
-    # https://www.kaggle.com/c/ieee-fraud-detection/discussion/100499#latest_df-579654
-    emails = {
-        "gmail": "google",
-        "att.net": "att",
-        "twc.com": "spectrum",
-        "scranton.edu": "other",
-        "optonline.net": "other",
-        "hotmail.co.uk": "microsoft",
-        "comcast.net": "other",
-        "yahoo.com.mx": "yahoo",
-        "yahoo.fr": "yahoo",
-        "yahoo.es": "yahoo",
-        "charter.net": "spectrum",
-        "live.com": "microsoft",
-        "aim.com": "aol",
-        "hotmail.de": "microsoft",
-        "centurylink.net": "centurylink",
-        "gmail.com": "google",
-        "me.com": "apple",
-        "earthlink.net": "other",
-        "gmx.de": "other",
-        "web.de": "other",
-        "cfl.rr.com": "other",
-        "hotmail.com": "microsoft",
-        "protonmail.com": "other",
-        "hotmail.fr": "microsoft",
-        "windstream.net": "other",
-        "outlook.es": "microsoft",
-        "yahoo.co.jp": "yahoo",
-        "yahoo.de": "yahoo",
-        "servicios-ta.com": "other",
-        "netzero.net": "other",
-        "suddenlink.net": "other",
-        "roadrunner.com": "other",
-        "sc.rr.com": "other",
-        "live.fr": "microsoft",
-        "verizon.net": "yahoo",
-        "msn.com": "microsoft",
-        "q.com": "centurylink",
-        "prodigy.net.mx": "att",
-        "frontier.com": "yahoo",
-        "anonymous.com": "other",
-        "rocketmail.com": "yahoo",
-        "sbcglobal.net": "att",
-        "frontiernet.net": "yahoo",
-        "ymail.com": "yahoo",
-        "outlook.com": "microsoft",
-        "mail.com": "other",
-        "bellsouth.net": "other",
-        "embarqmail.com": "centurylink",
-        "cableone.net": "other",
-        "hotmail.es": "microsoft",
-        "mac.com": "apple",
-        "yahoo.co.uk": "yahoo",
-        "netzero.com": "other",
-        "yahoo.com": "yahoo",
-        "live.com.mx": "microsoft",
-        "ptd.net": "other",
-        "cox.net": "other",
-        "aol.com": "aol",
-        "juno.com": "other",
-        "icloud.com": "apple",
-    }
-    us_emails = ["gmail", "net", "edu"]
-
-    for c in ["P_emaildomain", "R_emaildomain"]:
-        ds.X_train[c + "_bin"] = ds.X_train[c].map(emails)
-        ds.X_test[c + "_bin"] = ds.X_test[c].map(emails)
-
-        ds.X_train[c + "_suffix"] = ds.X_train[c].map(lambda x: str(x).split(".")[-1])
-        ds.X_test[c + "_suffix"] = ds.X_test[c].map(lambda x: str(x).split(".")[-1])
-
-        ds.X_train[c + "_suffix"] = ds.X_train[c + "_suffix"].map(
-            lambda x: x if str(x) not in us_emails else "us"
-        )
-        ds.X_test[c + "_suffix"] = ds.X_test[c + "_suffix"].map(
-            lambda x: x if str(x) not in us_emails else "us"
-        )
-
-    ds.X_train["is_proton_mail"] = (ds.X_train["P_emaildomain"] == "protonmail.com") | (
-        ds.X_train["R_emaildomain"] == "protonmail.com"
-    )
-    ds.X_test["is_proton_mail"] = (ds.X_test["P_emaildomain"] == "protonmail.com") | (
-        ds.X_test["R_emaildomain"] == "protonmail.com"
-    )
-
-    logger.info("Emails were mapped")
+    logger.info("Identity cols were processed")
 
 
 def parse_device(ds):
@@ -290,26 +142,47 @@ def parse_device(ds):
         ] = "Others"
         df["had_id"] = 1
 
-    logger.info("IDs were splitted")
+    ds.add_categorical_cols(
+        [
+            "device_name",
+            "device_version",
+            "OS_id_30",
+            "version_id_30",
+            "browser_id_31",
+            "version_id_31",
+            "screen_width",
+            "screen_height",
+        ]
+    )
+
+    logger.info("Devices were transformed")
 
 
-def build_transaction_features(ds):
-    """
-    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
-    """
-    # log of transaction amount.
-    ds.X_train["TransactionAmt_Log"] = np.log(ds.X_train["TransactionAmt"])
-    ds.X_test["TransactionAmt_Log"] = np.log(ds.X_test["TransactionAmt"])
+########################### TRANSACTION COLUMNS PROCESSING
 
-    # decimal part of the transaction amount.
-    ds.X_train["TransactionAmt_decimal"] = (
-        (ds.X_train["TransactionAmt"] - ds.X_train["TransactionAmt"].astype(int)) * 1000
-    ).astype(int)
-    ds.X_test["TransactionAmt_decimal"] = (
-        (ds.X_test["TransactionAmt"] - ds.X_test["TransactionAmt"].astype(int)) * 1000
-    ).astype(int)
 
-    logger.info("Built transaction features - log, decimal")
+def buildUUID(ds):
+    # Let's add some kind of client uID based on cardID ad addr columns
+    # The value will be very specific for each client so we need to remove it
+    # from final feature. But we can use it for aggregations.
+    for df in [ds.X_train, ds.X_test]:
+        df["uid"] = df["card1"].astype(str) + "_" + df["card2"].astype(str)
+        df["uid2"] = (
+            df["uid"].astype(str)
+            + "_"
+            + df["card3"].astype(str)
+            + "_"
+            + df["card5"].astype(str)
+        )
+        df["uid3"] = (
+            df["uid2"].astype(str)
+            + "_"
+            + df["addr1"].astype(str)
+            + "_"
+            + df["addr2"].astype(str)
+        )
+
+    logger.info("UUIDs were built")
 
 
 def build_date_features(ds, start_date="2017-11-30"):
@@ -334,39 +207,31 @@ def build_date_features(ds, start_date="2017-11-30"):
         # D9 is an hour
         df["D9"] = np.where(df["D9"].isna(), 0, 1)
 
-    logger.info("Built date features day_of_week and hour")
+    logger.info("Built date features")
 
 
-def build_interaction_features(ds):
+def transform_amount(ds):
     """
     https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
     """
-    # Some arbitrary features interaction + those extracted from our own analysis
-    random_intersection = [
-        "id_02__id_20",
-        "id_02__D8",
-        "D11__DeviceInfo",
-        "DeviceInfo__P_emaildomain",
-        "P_emaildomain__C2",
-        "card2__dist1",
-        "card1__card5",
-        "card2__id_20",
-        "card5__P_emaildomain",
-        "addr1__card1",
-    ]
-    my_intersections = ["C11__C13"]
-    for feature in random_intersection + my_intersections:
-        f1, f2 = feature.split("__")
-        ds.X_train[feature] = (
-            ds.X_train[f1].astype(str) + "_" + ds.X_train[f2].astype(str)
-        )
-        ds.X_test[feature] = ds.X_test[f1].astype(str) + "_" + ds.X_test[f2].astype(str)
+    for df in [ds.X_train, ds.X_test]:
+        # decimal part of the transaction amount.
+        df["TransactionAmt_decimal"] = (
+            (df["TransactionAmt"] - df["TransactionAmt"].astype(int)) * 1000
+        ).astype(int)
 
-    logger.info("Following columns were created for interaction")
-    logger.info(", ".join(random_intersection + my_intersections))
+        # log of transaction amount.
+        df["TransactionAmt_Log"] = np.log1p(df["TransactionAmt"])
 
+    # Check if the Transaction Amount is common or not (we can use freq encoding here)
+    # In our dialog with a model we are telling to trust or not to these values
+    ds.X_train["TransactionAmt_check"] = np.where(
+        ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
+    )
+    ds.X_test["TransactionAmt_check"] = np.where(
+        ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
+    )
 
-def aggregate_cols(ds):
     # For our model current TransactionAmt is a noise
     # https://www.kaggle.com/kyakovlev/ieee-check-noise
     # (even if features importances are telling contrariwise)
@@ -399,7 +264,144 @@ def aggregate_cols(ds):
     logger.info("TransactionAmt was aggregated")
 
 
-def binary_encoding(ds):
+def transform_productCD(ds):
+    for df in [ds.X_train, ds.X_test]:
+        df["ProductCD"] = df["ProductCD"].map({"W": 0, "C": 1, "R": 2, "H": 3, "S": 4})
+
+    logger.info("ProductCD was label encoded")
+
+
+def transform_emails_and_domains(ds):
+    # https://www.kaggle.com/c/ieee-fraud-detection/discussion/100499#latest_df-579654
+    emails = {
+        "gmail": "google",
+        "att.net": "att",
+        "twc.com": "spectrum",
+        "scranton.edu": "other",
+        "optonline.net": "other",
+        "hotmail.co.uk": "microsoft",
+        "comcast.net": "other",
+        "yahoo.com.mx": "yahoo",
+        "yahoo.fr": "yahoo",
+        "yahoo.es": "yahoo",
+        "charter.net": "spectrum",
+        "live.com": "microsoft",
+        "aim.com": "aol",
+        "hotmail.de": "microsoft",
+        "centurylink.net": "centurylink",
+        "gmail.com": "google",
+        "me.com": "apple",
+        "earthlink.net": "other",
+        "gmx.de": "other",
+        "web.de": "other",
+        "cfl.rr.com": "other",
+        "hotmail.com": "microsoft",
+        "protonmail.com": "other",
+        "hotmail.fr": "microsoft",
+        "windstream.net": "other",
+        "outlook.es": "microsoft",
+        "yahoo.co.jp": "yahoo",
+        "yahoo.de": "yahoo",
+        "servicios-ta.com": "other",
+        "netzero.net": "other",
+        "suddenlink.net": "other",
+        "roadrunner.com": "other",
+        "sc.rr.com": "other",
+        "live.fr": "microsoft",
+        "verizon.net": "yahoo",
+        "msn.com": "microsoft",
+        "q.com": "centurylink",
+        "prodigy.net.mx": "att",
+        "frontier.com": "yahoo",
+        "anonymous.com": "other",
+        "rocketmail.com": "yahoo",
+        "sbcglobal.net": "att",
+        "frontiernet.net": "yahoo",
+        "ymail.com": "yahoo",
+        "outlook.com": "microsoft",
+        "mail.com": "other",
+        "bellsouth.net": "other",
+        "embarqmail.com": "centurylink",
+        "cableone.net": "other",
+        "hotmail.es": "microsoft",
+        "mac.com": "apple",
+        "yahoo.co.uk": "yahoo",
+        "netzero.com": "other",
+        "yahoo.com": "yahoo",
+        "live.com.mx": "microsoft",
+        "ptd.net": "other",
+        "cox.net": "other",
+        "aol.com": "aol",
+        "juno.com": "other",
+        "icloud.com": "apple",
+    }
+    us_emails = ["gmail", "net", "edu"]
+
+    purchaser = "P_emaildomain"
+    recipient = "R_emaildomain"
+    unknown = "email_not_provided"
+
+    for df in [ds.X_train, ds.X_test]:
+        df["is_proton_mail"] = (df[purchaser] == "protonmail.com") | (
+            df[recipient] == "protonmail.com"
+        )
+        df["email_check"] = np.where(
+            (df[purchaser] == df[recipient]) & (df[purchaser] != unknown), 1, 0
+        )
+
+        for c in [purchaser, recipient]:
+            df[purchaser] = df[purchaser].fillna(unknown)
+            df[recipient] = df[recipient].fillna(unknown)
+
+            df[c + "_bin"] = df[c].map(emails)
+
+            df[c + "_suffix"] = df[c].map(lambda x: str(x).split(".")[-1])
+
+            df[c + "_suffix"] = df[c + "_suffix"].map(
+                lambda x: x if str(x) not in us_emails else "us"
+            )
+
+        df["DeviceInfo"] = df["DeviceInfo"].fillna("unknown_device").str.lower()
+        df["DeviceInfo_device"] = df["DeviceInfo"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+        df["DeviceInfo_version"] = df["DeviceInfo"].apply(
+            lambda x: "".join([i for i in x if i.isnumeric()])
+        )
+
+        ########################### Device info 2
+        df["id_30"] = df["id_30"].fillna("unknown_device").str.lower()
+        df["id_30_device"] = df["id_30"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+        df["id_30_version"] = df["id_30"].apply(
+            lambda x: "".join([i for i in x if i.isnumeric()])
+        )
+
+        ########################### Browser
+        df["id_31"] = df["id_31"].fillna("unknown_device").str.lower()
+        df["id_31_device"] = df["id_31"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+
+    ds.add_categorical_cols(
+        [
+            "P_emaildomain_bin",
+            "P_emaildomain_suffix",
+            "R_emaildomain_bin",
+            "R_emaildomain_suffix",
+            "DeviceInfo_device",
+            "DeviceInfo_version",
+            "id_30_device",
+            "id_30_version",
+            "id_31_device",
+        ]
+    )
+
+    logger.info("Emails were transformed")
+
+
+def encode_M_variables(ds):
     """Encode all M columns except M4
     """
     i_cols = ["M1", "M2", "M3", "M5", "M6", "M7", "M8", "M9"]
@@ -407,9 +409,45 @@ def binary_encoding(ds):
     for df in [ds.X_train, ds.X_test]:
         df["M_sum"] = df[i_cols].sum(axis=1).astype(np.int8)
         df["M_na"] = df[i_cols].isna().sum(axis=1).astype(np.int8)
+        for col in i_cols:
+            df[col] = df[col].map({"T": 1, "F": 0})
 
     logger.info("Following columns were binary encoded")
     logger.info(", ".join(i_cols))
+
+    for df in [ds.X_train, ds.X_test]:
+        df["M4"] = df["M4"].map({"M0": 1, "M1": 2, "M2": 3})
+
+    logger.info("M4 was label encoded")
+
+
+def build_interaction_features(ds):
+    """
+    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
+    """
+    # Some arbitrary features interaction + those extracted from our own analysis
+    random_intersection = [
+        "id_02__id_20",
+        "id_02__D8",
+        "D11__DeviceInfo",
+        "DeviceInfo__P_emaildomain",
+        "P_emaildomain__C2",
+        "card2__dist1",
+        "card1__card5",
+        "card2__id_20",
+        "card5__P_emaildomain",
+        "addr1__card1",
+    ]
+    my_intersections = ["C11__C13"]
+    for feature in random_intersection + my_intersections:
+        f1, f2 = feature.split("__")
+        ds.X_train[feature] = (
+            ds.X_train[f1].astype(str) + "_" + ds.X_train[f2].astype(str)
+        )
+        ds.X_test[feature] = ds.X_test[f1].astype(str) + "_" + ds.X_test[f2].astype(str)
+
+    logger.info("Following columns were created for interaction")
+    logger.info(", ".join(random_intersection + my_intersections))
 
 
 def one_hot_encoding(ds):
@@ -433,8 +471,8 @@ def one_hot_encoding(ds):
     ds.X_train = pd.concat([ds.X_train, pd.get_dummies(ds.X_train[i_cols])], axis=1)
     ds.X_test = pd.concat([ds.X_test, pd.get_dummies(ds.X_test[i_cols])], axis=1)
 
-    ds.X_train = ds.X_train.drop(i_cols, axis=1)
-    ds.X_test = ds.X_test.drop(i_cols, axis=1)
+    ds.X_train.drop(i_cols, axis=1, inplace=True)
+    ds.X_test.drop(i_cols, axis=1, inplace=True)
 
     logger.info("Following columns were one hot encoded then dropped")
     logger.info(", ".join(i_cols))
@@ -467,9 +505,9 @@ def count_encoding(ds):
             ds.X_test[feature].value_counts(dropna=False)
         )
 
-    logger.info("Following columns were label encoded, train/test together")
+    logger.info("Following columns were count encoded, train/test together")
     logger.info(", ".join(count_together))
-    logger.info("Following columns were label encoded, train/test separately")
+    logger.info("Following columns were count encoded, train/test separately")
     logger.info(", ".join(count_separately))
 
 
@@ -553,7 +591,8 @@ def frequency_encoding(ds):
             ds.X_train[new_column] /= ds.X_train[period + "_total"]
             ds.X_test[new_column] /= ds.X_test[period + "_total"]
 
-    logger.info("Columns were frequency encoded")
+    logger.info("Following columns were frequency encoded")
+    logger.info(", ".join(i_cols))
 
 
 def label_encoding(ds):
@@ -564,72 +603,73 @@ def label_encoding(ds):
     output: (train, test)
     """
     converted_cols = []
-    nan_constant = "unseen_before_label"
+    nan_constant = -999
 
-    for col in ds.X_train.columns:
-        if ds.X_train[col].dtype == object or ds.X_test[col].dtype == object:
-            ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
-            ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
+    for col in ds.categorical_cols:
+        ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
+        ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
 
-            lbl = LabelEncoder()
-            lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
-            ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
-            ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
+        lbl = LabelEncoder()
+        lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
+        ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
+        ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
 
-            if nan_constant in lbl.classes_:
-                nan_constant = lbl.transform([nan_constant])[0]
-                ds.X_train.loc[ds.X_train[col] == nan_constant, col] = np.nan
-                ds.X_test.loc[ds.X_test[col] == nan_constant, col] = np.nan
-            converted_cols.append(col)
+        if nan_constant in lbl.classes_:
+            nan_transformed = lbl.transform([nan_constant])[0]
+            ds.X_train.loc[ds.X_train[col] == nan_transformed, col] = np.nan
+            ds.X_test.loc[ds.X_test[col] == nan_transformed, col] = np.nan
+        converted_cols.append(col)
 
     logger.info("Following columns were label encoded")
     logger.info(", ".join(converted_cols))
 
 
-def target_mean_encoding(ds):
-    """ProductCD and M4 Target mean
+def remove_numerous_categories(ds):
     """
-    for col in ["ProductCD", "M4"]:
-        temp_dict = (
-            ds.X_train.groupby([col])[TARGET]
-            .agg(["mean"])
-            .reset_index()
-            .rename(columns={"mean": col + "_target_mean"})
-        )
-        temp_dict.index = temp_dict[col].values
-        temp_dict = temp_dict[col + "_target_mean"].to_dict()
-
-        ds.X_train[col + "_target_mean"] = ds.X_train[col].map(temp_dict)
-        ds.X_test[col + "_target_mean"] = ds.X_test[col].map(temp_dict)
-
-
-def convert_category_cols_lgb(ds):
+    Remove cols with too much values from categorical
     """
-    Only necessary for LGB if doing automatic category
-    """
-    converted_cols = []
-    for col in ds.X_train.columns:
-        # Work on strings to categorical if number of unique values is less than 50%
-        if ds.X_train[col].dtype == object or ds.X_test[col].dtype == object:
-            num_unique_values = len(
-                set(list(ds.X_train[col].values) + list(ds.X_test[col].values))
-            )
-            num_total_values = len(
-                list(ds.X_train[col].values) + list(ds.X_test[col].values)
-            )
-            if num_unique_values / num_total_values < 0.5:
-                ds.X_train[col] = ds.X_train[col].astype("category")
-                ds.X_test[col] = ds.X_test[col].astype("category")
-            converted_cols.append(col)
+    remove_cat_col = []
+    for col in ds.categorical_cols:
+        num_unique_values = ds.X_train[col].append(ds.X_test[col]).nunique()
+        num_total_values = ds.X_train[col].shape[0] + ds.X_test[col].shape[0]
 
-        ## we also know all categorical columns already xD
-        if col in ds.get_categorical_cols():
-            ds.X_train[col] = ds.X_train[col].astype("category")
-            ds.X_test[col] = ds.X_test[col].astype("category")
-            converted_cols.append(col)
+        # if num_unique_values / num_total_values > 0.5:
+        # should do some binning I think
+        # remove_cat_col.append(col)
 
-    logger.info("Following columns were converted to category")
-    logger.info(", ".join(converted_cols))
+    ds.remove_categorical_cols(remove_cat_col)
+
+    logger.info("Following columns were dropped from category")
+    logger.info(", ".join(remove_cat_col))
+
+
+def drop_temp_cols(ds):
+    rm_cols = [
+        "TransactionDT",  # These columns are pure noise right now
+        "uid",
+        "uid2",
+        "uid3",  # Our new client uID -> very noisy data
+        "DT",
+        "DT_M",
+        "DT_W",
+        "DT_D",  # Temporary Variables
+        "DT_hour",
+        "DT_day_week",
+        "DT_day",
+        "DT_D_total",
+        "DT_W_total",
+        "DT_M_total",
+        "id_30",
+        "id_31",
+        "id_33",
+    ]
+    for df in [ds.X_train, ds.X_test]:
+        df.drop(rm_cols, axis=1, inplace=True)
+
+    ds.remove_categorical_cols(rm_cols)
+
+    logger.info("Temporary columns were dropped")
+    logger.info(", ".join(rm_cols))
 
 
 def drop_cols(ds):
@@ -662,26 +702,6 @@ def drop_cols(ds):
         if ds.X_test[col].value_counts(dropna=False, normalize=True).values[0] > 0.9
     ]
 
-    rm_cols = [
-        "TransactionDT",  # These columns are pure noise right now
-        "uid",
-        "uid2",
-        "uid3",  # Our new client uID -> very noisy data
-        "DT",
-        "DT_M",
-        "DT_W",
-        "DT_D",  # Temporary Variables
-        "DT_hour",
-        "DT_day_week",
-        "DT_day",
-        "DT_D_total",
-        "DT_W_total",
-        "DT_M_total",
-        "id_30",
-        "id_31",
-        "id_33",
-    ]
-
     cols_to_drop = list(
         set(
             many_null_cols
@@ -690,12 +710,13 @@ def drop_cols(ds):
             + big_top_value_cols_test
             + one_value_cols
             + one_value_cols_test
-            + rm_cols
         )
     )
 
-    ds.X_train = ds.X_train.drop(cols_to_drop, axis=1)
-    ds.X_test = ds.X_test.drop(cols_to_drop, axis=1)
+    for df in [ds.X_train, ds.X_test]:
+        df.drop(cols_to_drop, axis=1, inplace=True)
+
+    ds.remove_categorical_cols(cols_to_drop)
 
     logger.info("Following columns were dropped")
     logger.info(", ".join(cols_to_drop))
@@ -705,24 +726,23 @@ def build_processed_dataset(ds):
     clean_inf_nan(ds)
     clean_noise_cards(ds)
 
-    transform_amount(ds)
-    parse_emails(ds)
-    map_emails(ds)
+    process_identity(ds)
     parse_device(ds)
-    build_transaction_features(ds)
+
+    buildUUID(ds)
     build_date_features(ds)
-    build_interaction_features(ds)
-    aggregate_cols(ds)
+    transform_amount(ds)
+    transform_productCD(ds)
+    transform_emails_and_domains(ds)
+    encode_M_variables(ds)
 
-    # reducer = VestaReducer(ds)
-    # reducer.pca(ds)
-    # reducer.drop_v_cols(ds)
+    # build_interaction_features(ds)
 
-    binary_encoding(ds)
-    # one_hot_encoding(ds)
     count_encoding(ds)
     frequency_encoding(ds)
-    label_encoding(ds)
-    # target_mean_encoding(ds) # Data leakage, do in each fold separately !
 
+    label_encoding(ds)
+    remove_numerous_categories(ds)
+
+    drop_temp_cols(ds)
     drop_cols(ds)

@@ -8,10 +8,8 @@ import click
 from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
 from src.config import read_configuration, write_params
 from src.dataset.make_dataset import Dataset
-from src.features.build_features import (
-    build_processed_dataset,
-    convert_category_cols_lgb,
-)
+from src.features.build_features import build_processed_dataset
+from src.features.utils import convert_category_cols_lgb
 from src.model.split import TimeSeriesSplit, impute_mean
 from src.model.train import (
     clf_catboost,
@@ -76,6 +74,8 @@ def run_experiment(version, key):
 
     logger.info(f"Building {classifier} model")
     folds = TimeSeriesSplit(n_splits=5)
+    folds = KFold(n_splits=5, random_state=0, shuffle=False)
+
     result = run_train_predict(
         ds, modellers[classifier], params, folds, preprocessors_fold[classifier]
     )

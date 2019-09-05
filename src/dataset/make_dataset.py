@@ -516,12 +516,21 @@ class Dataset:
             "M8",
             "M9",
         ]
+        self.categorical_cols = (
+            self.identity_cols_categorical + self.transaction_cols_categorical
+        )
 
-    def get_categorical_cols(self):
+    def add_categorical_cols(self, elements):
+        """Add custom column to categorical cols
         """
-        Returns the set of predefined categorical columns
+        self.categorical_cols = self.categorical_cols + elements
+
+    def remove_categorical_cols(self, cols_to_drop):
+        """Remove custom column from categorical cols
         """
-        return self.identity_cols_categorical + self.transaction_cols_categorical
+        self.categorical_cols = [
+            c for c in self.categorical_cols if c not in cols_to_drop
+        ]
 
     def load_dataset(self, version="", load_test=True):
         self.X_train = pd.read_parquet(
@@ -562,9 +571,13 @@ class Dataset:
         )
 
         train = train_transaction.merge(
-            train_identity, how="left", left_index=True, right_index=True, indicator='has_identity'
+            train_identity,
+            how="left",
+            left_index=True,
+            right_index=True,
+            indicator="has_identity",
         )
-        train['has_identity'] = train['has_identity'].map({'left_only': 0, 'both': 1})
+        train["has_identity"] = train["has_identity"].map({"left_only": 0, "both": 1})
 
         train = reduce_mem_usage(train)
 
@@ -586,9 +599,13 @@ class Dataset:
             )
 
             test = test_transaction.merge(
-                test_identity, how="left", left_index=True, right_index=True, indicator='has_identity'
+                test_identity,
+                how="left",
+                left_index=True,
+                right_index=True,
+                indicator="has_identity",
             )
-            test['has_identity'] = test['has_identity'].map({'left_only': 0, 'both': 1})
+            test["has_identity"] = test["has_identity"].map({"left_only": 0, "both": 1})
 
             test = reduce_mem_usage(test)
             del test_transaction, test_identity

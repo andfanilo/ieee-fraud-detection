@@ -86,6 +86,7 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
     X = ds.X_train
     X_test = ds.X_test
     y = ds.y_train
+    category_cols = ds.categorical_cols
     n_splits = folds.n_splits
 
     # Prepare output, list of scores on folds
