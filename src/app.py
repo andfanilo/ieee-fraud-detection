@@ -99,5 +99,60 @@ def run_experiment(version, key):
     logger.info("End run experiment")
 
 
+@click.command()
+def run_baseline():
+    time_experiment = datetime.now().strftime("%m%d%Y_%H%M")
+    seed_everything(0)
+
+    ds = Dataset()
+    ds.load_dataset()
+
+    from sklearn.preprocessing import LabelEncoder
+
+    nan_constant = -999
+    for col, col_type in ds.X_train.dtypes.iteritems():
+        if col_type == "object":
+            ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
+            ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
+
+            lbl = LabelEncoder()
+            lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
+            ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
+            ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
+
+            if nan_constant in lbl.classes_:
+                nan_transformed = lbl.transform([nan_constant])[0]
+                ds.X_train.loc[ds.X_train[col] == nan_transformed, col] = np.nan
+                ds.X_test.loc[ds.X_test[col] == nan_transformed, col] = np.nan
+
+        if col in ds.categorical_cols:
+            ds.X_train[col] = ds.X_train[col].fillna(-1).astype("category")
+            ds.X_test[col] = ds.X_test[col].fillna(-1).astype("category")
+
+    lgb_params = {
+        "n_estimators": 50000,
+        "early_stopping_rounds": 200,
+        "num_leaves": 256,
+        "learning_rate": 0.03,
+        "max_depth": 9,
+        "objective": "binary",
+        "metric": "auc",
+        "subsample": 0.9,
+        "colsample_bytree": 0.9,
+        "scale_pos_weight": 5.5,  #  mimic a fraud rate ~20% - 0.2*N_legit/N_fraud
+        "boosting_type": "gbdt",
+        "seed": 1337,
+        "n_jobs": -1,
+        "verbosity": -1,
+    }
+
+    folds = KFold(n_splits=5, random_state=0, shuffle=False)
+    result = run_train_predict(ds, clf_lgb, lgb_params, folds, None)
+
+    path_to_preds = f"baseline_lgb_{time_experiment}"
+    ds.submission["isFraud"] = result["prediction"]
+    ds.write_submission(path_to_preds)
+
+
 if __name__ == "__main__":
     run_experiment()

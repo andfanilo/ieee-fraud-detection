@@ -35,9 +35,10 @@ setup(
     description="IEEE Fraud Detection Kaggle challenge",
     python_requires=">=3.6",
     long_description=readme(),
-    install_requires=requirements(),
+    # install_requires=requirements(),
     entry_points="""
     [console_scripts]
     run_experiment=src.app:run_experiment
+    run_baseline=src.app:run_baseline
     """,
 )
