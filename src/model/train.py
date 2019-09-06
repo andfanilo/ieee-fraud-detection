@@ -38,7 +38,7 @@ def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
         params=params,
         dtrain=train_data,
         evals=watchlist,
-        # feval=eval_auc_xgb,
+        # feval=eval_auc_xgb, # put disable_default_eval_metric:"1" in params
         verbose_eval=100,
     )
     y_pred_valid = model.predict(
@@ -52,19 +52,20 @@ def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
-    model = lgb.LGBMClassifier(**params)
-    model.fit(
-        X_train,
-        y_train,
-        eval_set=[(X_train, y_train), (X_valid, y_valid)],
-        # eval_metric=eval_auc_lgb,
-        verbose=100,
+    train_data = lgb.Dataset(data=X_train, label=y_train)
+    valid_data = lgb.Dataset(data=X_valid, label=y_valid)
+
+    model = lgb.train(
+        params=params,
+        train_set=train_data,
+        valid_sets=[train_data, valid_data],
+        valid_names=["train", "valid"],
+        # feval=eval_auc_lgb, # put metric:"None" in params
+        verbose_eval=100,
     )
 
-    y_pred_valid = model.predict_proba(X_valid, num_iteration=model.best_iteration_)[
-        :, 1
-    ]
-    y_pred = model.predict_proba(X_test, num_iteration=model.best_iteration_)[:, 1]
+    y_pred_valid = model.predict(X_valid, num_iteration=model.best_iteration)
+    y_pred = model.predict(X_test, num_iteration=model.best_iteration)
     return model, y_pred_valid, y_pred
 
 

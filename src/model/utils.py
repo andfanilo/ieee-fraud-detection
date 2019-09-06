@@ -15,7 +15,7 @@ def load_model(name):
     return pickle.load(open(folder / name + ".pickle.dat", "rb"))
 
 
-@jit
+@jit(nopython=True)
 def fast_auc(y_true, y_prob):
     """
     fast roc_auc computation: https://www.kaggle.com/c/microsoft-malware-prediction/discussion/76013
@@ -33,7 +33,7 @@ def fast_auc(y_true, y_prob):
     return auc
 
 
-@jit
+@jit(nopython=True)
 def fast_auc_weight(y_true, y_prob, w):
     """
     fast roc_auc computation: https://www.kaggle.com/c/microsoft-malware-prediction/discussion/80182
@@ -52,18 +52,20 @@ def fast_auc_weight(y_true, y_prob, w):
     return auc
 
 
-def eval_auc_lgb(y_true, y_pred):
+def eval_auc_lgb(preds, dtrain):
     """
     Fast auc eval function for lgb.
     """
-    return "auc", fast_auc(y_true, y_pred), True
+    labels = dtrain.get_label()
+    return "fast auc", fast_auc(labels, preds), True
 
 
-def eval_auc_xgb(y_true, y_pred):
+def eval_auc_xgb(preds, dtrain):
     """
     Fast auc eval function for xgb.
     """
-    return "auc", fast_auc(y_true, y_pred)
+    labels = dtrain.get_label()
+    return "fast auc", fast_auc(labels, preds)
 
 
 def group_mean_log_mae(y_true, y_pred, types, floor=1e-9):
