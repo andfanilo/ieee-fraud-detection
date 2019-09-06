@@ -5,6 +5,7 @@ import warnings
 from datetime import datetime
 
 import click
+import numpy as np
 from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
 from src.config import read_configuration, write_params
 from src.dataset.make_dataset import Dataset
@@ -155,4 +156,4 @@ def run_baseline():
 
 
 if __name__ == "__main__":
-    run_experiment()
+    run_experiment("", "lgb")
