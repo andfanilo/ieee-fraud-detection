@@ -742,7 +742,7 @@ def build_processed_dataset(ds):
     frequency_encoding(ds)
 
     label_encoding(ds)
-    remove_numerous_categories(ds)
+    # remove_numerous_categories(ds)
 
     drop_temp_cols(ds)
     drop_cols(ds)
