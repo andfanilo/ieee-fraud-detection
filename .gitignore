@@ -61,9 +61,10 @@ target/
 # pyenv python configuration file
 .python-version
 
-# exclude data and models from source control
+# exclude data, models and figures from source control
 data/
 models/
+reports/figures
 
 # ipynb checkpoints
 .ipynb_checkpoints

@@ -98,7 +98,14 @@ class TreeVisualizer:
         return shap.dependence_plot(feature, self.shap_interaction_values, self.X)
 
     def force_plot(self):
-        return shap.force_plot(self.explainer.expected_value, self.shap_values, self.X)
+        return shap.force_plot(
+            self.explainer.expected_value, self.shap_values, self.X, matplotlib=True
+        )
+
+    def decision_plot(self):
+        return shap.decision_plot(
+            self.explainer.expected_value, self.shap_values, self.X, matplotlib=True
+        )
 
 
 def plot_classification_report(model, X_valid, y_valid):
