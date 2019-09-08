@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import numpy as np
-from sklearn.impute import SimpleImputer
+from sklearn.model_selection import PredefinedSplit
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import indexable
 from sklearn.utils.validation import _num_samples
@@ -10,12 +10,11 @@ from sklearn.utils.validation import _num_samples
 LOGGER = logging.getLogger(__name__)
 
 
-def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
-    imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
-    X_train = imp.transform(X_train)
-    X_valid = imp.transform(X_valid)
-    X_test = imp.transform(X_test)
-    return X_train, y_train, X_valid, y_valid, X_test
+def train_test_predefined(length_X):
+    test_fold = np.zeros(length_X)
+    length_train_fold = 5 * (length_X // 6)
+    test_fold[0:length_train_fold] = -1
+    return PredefinedSplit(test_fold)
 
 
 class TimeSeriesSplit(_BaseKFold):  # pylint: disable=abstract-method

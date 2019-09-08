@@ -9,9 +9,9 @@ import numpy as np
 from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
 from src.config import read_configuration, write_params
 from src.dataset.make_dataset import Dataset
-from src.features.build_features import build_processed_dataset
+from src.features.build_features import build_processed_dataset, process_fold
 from src.features.utils import convert_category_cols_lgb
-from src.model.split import TimeSeriesSplit, impute_mean
+from src.model.split import TimeSeriesSplit, train_test_predefined
 from src.model.train import (
     clf_catboost,
     clf_lgb,
@@ -44,7 +44,7 @@ def run_experiment(version, key):
     # Predefine functions
     preprocessors = {"lgb": convert_category_cols_lgb}
     preprocessors_fold = {
-        "logistic": impute_mean,
+        "logistic": process_fold,
         "lgb": None,
         "xgb": None,
         "catboost": None,
@@ -76,8 +76,13 @@ def run_experiment(version, key):
     gc.collect()
 
     logger.info(f"Building {classifier} model")
-    folds = TimeSeriesSplit(n_splits=5)
-    folds = KFold(n_splits=5, random_state=0, shuffle=False)
+
+    # Choose cross-validation strategy
+    # folds = TimeSeriesSplit(n_splits=5)
+    # folds = KFold(n_splits=5, random_state=0, shuffle=False)
+
+    ### Imitate train_test_split behavior without shuffling
+    folds = train_test_predefined(len(ds.X_train))
 
     result = run_train_predict(
         ds, modellers[classifier], params, folds, preprocessors_fold[classifier]

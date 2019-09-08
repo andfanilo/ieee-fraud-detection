@@ -723,26 +723,41 @@ def drop_cols(ds):
 
 
 def build_processed_dataset(ds):
-    clean_inf_nan(ds)
-    clean_noise_cards(ds)
+    # clean_inf_nan(ds)
+    # clean_noise_cards(ds)
 
-    process_identity(ds)
-    parse_device(ds)
+    # process_identity(ds)
+    # parse_device(ds)
 
-    buildUUID(ds)
-    build_date_features(ds)
-    transform_amount(ds)
-    transform_productCD(ds)
-    transform_emails_and_domains(ds)
-    encode_M_variables(ds)
+    # buildUUID(ds)
+    # build_date_features(ds)
+    # transform_amount(ds)
+    # transform_productCD(ds)
+    # transform_emails_and_domains(ds)
+    # encode_M_variables(ds)
 
     # build_interaction_features(ds)
 
-    count_encoding(ds)
-    frequency_encoding(ds)
+    # count_encoding(ds)
+    # frequency_encoding(ds)
 
     label_encoding(ds)
     # remove_numerous_categories(ds)
 
-    drop_temp_cols(ds)
-    drop_cols(ds)
+    # drop_temp_cols(ds)
+    # drop_cols(ds)
+
+
+def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
+    imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
+    X_train = imp.transform(X_train)
+    X_valid = imp.transform(X_valid)
+    X_test = imp.transform(X_test)
+    return X_train, y_train, X_valid, y_valid, X_test
+
+
+def process_fold(X_train, y_train, X_valid, y_valid, X_test):
+    X_train, y_train, X_valid, y_valid, X_test = impute_mean(
+        X_train, y_train, X_valid, y_valid, X_test
+    )
+    return X_train, y_train, X_valid, y_valid, X_test

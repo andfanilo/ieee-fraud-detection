@@ -88,7 +88,7 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
     X_test = ds.X_test
     y = ds.y_train
     category_cols = ds.categorical_cols
-    n_splits = folds.n_splits
+    n_splits = folds.get_n_splits()
 
     # Prepare output, list of scores on folds
     result_dict = {}
