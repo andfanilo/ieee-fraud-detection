@@ -1,7 +1,9 @@
+import datetime
 import logging
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import PredefinedSplit
 from sklearn.model_selection._split import _BaseKFold
 from sklearn.utils import indexable
@@ -10,11 +12,47 @@ from sklearn.utils.validation import _num_samples
 LOGGER = logging.getLogger(__name__)
 
 
-def train_test_predefined(length_X):
-    test_fold = np.zeros(length_X)
-    length_train_fold = 5 * (length_X // 6)
-    test_fold[0:length_train_fold] = -1
-    return PredefinedSplit(test_fold)
+class CustomDateSplitter:
+    """Split per month
+
+    Provide a 2D array of [training date range] in first column, [testing date range] in second column
+
+    Examples
+    --------
+    >>> date_ranges = [
+        [['2017-12-01', '2017-12-05'], ['2017-12-06', '2017-12-10']], 
+        [['2017-12-10', '2017-12-20'], ['2017-12-21', '2017-12-30']], 
+        [['2017-12-05', '2017-12-15'], ['2017-12-20', '2017-12-22']]
+                ]
+    >>> datetime_array = ds.X_train['TransactionDT']
+    >>> cv = CustomDateSplitter(datetime_array, date_ranges)
+    >>> print(cv)
+    CustomDateSplitter(train_size=None, n_splits=5)
+    >>> for train_index, test_index in cv.split(X):
+    ...    print('TRAIN:', train_index, 'TEST:', test_index)    
+    """
+
+    def __init__(self, datetime_array, date_ranges):
+        start_date = datetime.datetime.strptime("2017-11-30", "%Y-%m-%d")
+        datetime_array = datetime_array.reset_index()
+        datetime_array["TransactionDT"] = datetime_array["TransactionDT"].map(
+            lambda x: start_date + datetime.timedelta(seconds=x)
+        )
+        datetime_array["id"] = np.arange(len(datetime_array))
+        datetime_array = datetime_array.set_index("TransactionDT")
+        datetime_array = datetime_array.drop("TransactionID", axis=1)
+        self.datetime_array = datetime_array
+        self.date_ranges = date_ranges
+
+    def split(self, X=None, y=None, groups=None):
+        for [[start_train, end_train], [start_test, end_test]] in self.date_ranges:
+            yield (
+                self.datetime_array[start_train:end_train].values.ravel(),
+                self.datetime_array[start_test:end_test].values.ravel(),
+            )
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        return len(self.date_ranges)
 
 
 class TimeSeriesSplit(_BaseKFold):  # pylint: disable=abstract-method

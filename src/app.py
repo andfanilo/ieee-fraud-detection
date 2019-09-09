@@ -11,7 +11,7 @@ from src.config import read_configuration, write_params
 from src.dataset.make_dataset import Dataset
 from src.features.build_features import build_processed_dataset, process_fold
 from src.features.utils import convert_category_cols_lgb
-from src.model.split import TimeSeriesSplit, train_test_predefined
+from src.model.split import CustomDateSplitter
 from src.model.train import (
     clf_catboost,
     clf_lgb,
@@ -67,6 +67,13 @@ def run_experiment(version, key):
     ds = Dataset()
     ds.load_dataset(version)
 
+    logger.info("Build folds")
+    date_ranges = [
+        [["2018-01-01", "2018-05-31"], ["2017-12-01", "2017-12-31"]],
+        [["2017-12-01", "2018-04-30"], ["2018-05-01", "2018-05-31"]],
+    ]
+    folds = CustomDateSplitter(ds.X_train["TransactionDT"], date_ranges)
+
     logger.info("Preprocessing data")
     build_processed_dataset(ds)
     if classifier in preprocessors:
@@ -76,14 +83,6 @@ def run_experiment(version, key):
     gc.collect()
 
     logger.info(f"Building {classifier} model")
-
-    # Choose cross-validation strategy
-    # folds = TimeSeriesSplit(n_splits=5)
-    # folds = KFold(n_splits=5, random_state=0, shuffle=False)
-
-    ### Imitate train_test_split behavior without shuffling
-    folds = train_test_predefined(len(ds.X_train))
-
     result = run_train_predict(
         ds, modellers[classifier], params, folds, preprocessors_fold[classifier]
     )

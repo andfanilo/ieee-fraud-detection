@@ -55,8 +55,6 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
     train_data = lgb.Dataset(data=X_train, label=y_train)
     valid_data = lgb.Dataset(data=X_valid, label=y_valid)
 
-    y_pred = None
-
     model = lgb.train(
         params=params,
         train_set=train_data,
@@ -67,8 +65,7 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
     )
 
     y_pred_valid = model.predict(X_valid, num_iteration=model.best_iteration)
-    if X_test:
-        y_pred = model.predict(X_test, num_iteration=model.best_iteration)
+    y_pred = model.predict(X_test, num_iteration=model.best_iteration)
     return model, y_pred_valid, y_pred
 
 
