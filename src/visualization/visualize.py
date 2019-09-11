@@ -1,4 +1,4 @@
-from itertools import groupby
+from itertools import combinations, groupby
 
 import altair as alt
 import matplotlib.pyplot as plt
@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
-from src.visualization.utils import value_counts, value_counts_byfraud
+from src.visualization.utils import rand_jitter, value_counts, value_counts_byfraud
 
 KDE_LW = 0.5
 
@@ -40,9 +40,9 @@ def hist_train_test(X_train, X_test, col, bins):
 def hist_isfraud(X_train, col, bins):
     fig, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(15, 4))
 
-    # ax1.hist(X_train[X_train["label"] == 0][col], bins=bins)
+    # ax1.hist(X_train[X_train["isFraud"] == 0][col], bins=bins)
     sns.distplot(
-        X_train[X_train["label"] == 0][col].dropna(),
+        X_train[X_train["isFraud"] == 0][col].dropna(),
         bins=bins,
         ax=ax1,
         kde_kws={"color": "k", "lw": KDE_LW},
@@ -50,9 +50,9 @@ def hist_isfraud(X_train, col, bins):
     )
     ax1.set_title(f"Distribution of non fraud {col}")
 
-    # ax2.hist(X_train[X_train["label"] == 1][col], bins=bins, facecolor="orange")
+    # ax2.hist(X_train[X_train["isFraud"] == 1][col], bins=bins, facecolor="orange")
     sns.distplot(
-        X_train[X_train["label"] == 1][col].dropna(),
+        X_train[X_train["isFraud"] == 1][col].dropna(),
         bins=bins,
         ax=ax2,
         kde_kws={"color": "k", "lw": KDE_LW},
@@ -61,6 +61,38 @@ def hist_isfraud(X_train, col, bins):
     ax2.set_title(f"Distribution of fraud {col}")
 
     fig.show()
+
+
+def plot_jitter(x, y, **kwargs):
+    return plt.scatter(rand_jitter(x), rand_jitter(y), **kwargs)
+
+
+def plot_joint(X, col1, col2, jitter=False):
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_xlabel(col1, fontsize=10)
+    ax.set_ylabel(col2, fontsize=10)
+    ax.set_title(f"Joint {col1} - {col2}", fontsize=15)
+    targets = [0, 1]
+    colors = ["g", "r"]
+    for target, color in zip(targets, colors):
+        indicesToKeep = X["isFraud"] == target
+        if jitter:
+            plot_jitter(
+                X.loc[indicesToKeep, col1], X.loc[indicesToKeep, col2], c=color, s=15
+            )
+        else:
+            ax.scatter(
+                X.loc[indicesToKeep, col1], X.loc[indicesToKeep, col2], c=color, s=15
+            )
+    ax.legend(targets)
+    return fig
+
+
+def save_pairplots(X, cols, folder, jitter=False):
+    all_combinations = list(combinations(cols, 2))
+    for col1, col2 in all_combinations:
+        plot_joint(X, col1, col2, jitter).savefig(folder + f"{col1}-{col2}.png")
+        plt.close()
 
 
 def grid_distplot(X, quantitative_cols):
@@ -94,17 +126,17 @@ def grid_countplot(X, qualitative_cols, keep_n_levels=4):
 
 def grouped_countplot_fraud(X, col):
     stacked = (
-        pd.crosstab(X[col], X["label"])
+        pd.crosstab(X[col], X["isFraud"])
         .stack()
         .reset_index()
         .rename(columns={0: "value"})
     )
-    sns.barplot(x=col, y="value", hue="label", data=stacked)
+    sns.barplot(x=col, y="value", hue="isFraud", data=stacked)
 
 
 def grid_countplot_fraud(X, qualitative_cols):
-    f = pd.melt(X, id_vars=["label"], value_vars=qualitative_cols)
-    g = sns.catplot("label", col="variable", col_wrap=4, data=f, kind="count")
+    f = pd.melt(X, id_vars=["isFraud"], value_vars=qualitative_cols)
+    g = sns.catplot("isFraud", col="variable", col_wrap=4, data=f, kind="count")
     return g
 
 
@@ -114,31 +146,28 @@ def grid_pairplot(X, quantative_cols, jitter=False):
     def hide_current_axis(*args, **kwds):
         plt.gca().set_visible(False)
 
-    # https://stackoverflow.com/a/21276920 for jitter
-    def rand_jitter(arr):
-        stdev = 0.01 * (max(arr) - min(arr))
-        return arr + np.random.randn(len(arr)) * stdev
-
-    def jitter(x, y, **kwargs):
-        return plt.scatter(rand_jitter(x), rand_jitter(y), **kwargs)
-
-    g = sns.PairGrid(X[quantative_cols + ["label"]], hue="label", diag_sharey=False)
+    g = sns.PairGrid(
+        X[quantative_cols + ["isFraud"]],
+        hue="isFraud",
+        hue_order=[0, 1],
+        diag_sharey=False,
+    )
     g.map_diag(plt.hist)
     g.map_upper(hide_current_axis)
     if jitter:
-        g.map_lower(jitter, s=2, alpha=0.1)
+        g.map_lower(plot_jitter, s=2.5, alpha=0.2)
     else:
-        g.map_lower(plt.scatter, s=2, alpha=0.1)
+        g.map_lower(plt.scatter, s=2.5, alpha=0.2)
     return g
 
 
 def grid_violin_fraud(X, quantative_cols):
-    # single violin: ax = sns.violinplot(x="id_01", y="label", data=X, orient='h')
-    f = pd.melt(X, id_vars=["label"], value_vars=quantative_cols)
+    # single violin: ax = sns.violinplot(x="id_01", y="isFraud", data=X, orient='h')
+    f = pd.melt(X, id_vars=["isFraud"], value_vars=quantative_cols)
     g = sns.catplot(
         data=f,
         x="value",
-        y="label",
+        y="isFraud",
         col="variable",
         orient="h",
         col_wrap=4,
@@ -177,7 +206,7 @@ def interactive_hist_isfraud(X, col, bins):
     """
     # I think if one automatically created bin is not completed, you get broadcast error, change bons number then
     # or correct code to take empty bins into account
-    df = X[[col, "label"]].copy()
+    df = X[[col, "isFraud"]].copy()
     df[col] = pd.cut(df[col], np.linspace(df[col].min() - 1, df[col].max(), bins))
     return interactive_bar_isfraud(df, col)
 
@@ -199,7 +228,7 @@ def interactive_bar_isfraud(X, col, width=800):
             x=alt.X(f"{col}:N", axis=alt.Axis(title=col), sort=None),
             y=alt.Y("count:Q", axis=alt.Axis(title="Count")),
             color=alt.Color("label:N"),
-            tooltip=[col, "count", "label"],
+            tooltip=[col, "count", "isFraud"],
         )
         .properties(title=f"Counts of {col} by fraud", width=width)
     ).interactive()
@@ -215,7 +244,7 @@ def interactive_barh_isfraud(X, col, width=800):
             x=alt.X("count:Q", axis=alt.Axis(title="Count")),
             y=alt.Y(f"{col}:N", axis=alt.Axis(title=col), sort=None),
             color=alt.Color("label:N"),
-            tooltip=[col, "count", "label"],
+            tooltip=[col, "count", "isFraud"],
         )
         .properties(title=f"Counts of {col} by fraud", width=width)
     ).interactive()

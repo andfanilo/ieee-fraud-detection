@@ -741,6 +741,13 @@ def build_processed_dataset(ds):
     # count_encoding(ds)
     # frequency_encoding(ds)
 
+    # ds.X_train.drop(ds.identity_cols, axis=1, inplace=True)
+    # ds.X_test.drop(ds.identity_cols, axis=1, inplace=True)
+    # ds.remove_categorical_cols(ds.identity_cols_categorical)
+
+    ds.X_train.drop("TransactionDT", axis=1, inplace=True)
+    ds.X_test.drop("TransactionDT", axis=1, inplace=True)
+
     label_encoding(ds)
     # remove_numerous_categories(ds)
 

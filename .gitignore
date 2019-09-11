@@ -64,7 +64,7 @@ target/
 # exclude data, models and figures from source control
 data/
 models/
-reports/figures
+reports/
 
 # ipynb checkpoints
 .ipynb_checkpoints

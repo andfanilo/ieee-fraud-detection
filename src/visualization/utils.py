@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def value_counts(X, col):
     return (
         X[col]
@@ -16,3 +19,9 @@ def value_counts_byfraud(X, col):
         .rename(columns={"label": "count"})
         .reset_index()
     )
+
+
+# https://stackoverflow.com/a/21276920 for jitter
+def rand_jitter(arr):
+    stdev = 0.01 * (max(arr) - min(arr))
+    return arr + np.random.randn(len(arr)) * stdev
