@@ -1,27 +1,49 @@
 import numpy as np
 import pandas as pd
 import umap
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 
-class VestaReducer:
-    def __init__(self, ds):
+class VestaTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, V_features):
         """
         Reduce Vesta features
         """
-        self.V_features = [col for col in ds.X_train.columns.values if col[0] == "V"]
+        self.V_features = (
+            V_features
+        )  # [col for col in ds.X_train.columns.values if col[0] == "V"]
+        self.V_groups = self._find_Vgroups(self.V_features)
 
         self.X_train = ds.X_train[self.V_features].copy().values.astype("float32")
         self.X_test = ds.X_test[self.V_features].copy().values.astype("float32")
         self.y_train = ds.y_train.copy().reset_index()["isFraud"]
 
-        self.X_train[np.isnan(self.X_train)] = 0
-        self.X_test[np.isnan(self.X_test)] = 0
+        # Mostly count or ranking so can replace NaN by -1
+        self.X_train[np.isnan(self.X_train)] = -1
+        self.X_test[np.isnan(self.X_test)] = -1
 
-        scaler = StandardScaler().fit(self.X_train)
-        self.X_train = scaler.transform(self.X_train)
-        self.X_test = scaler.transform(self.X_test)
+    def fit(self, X, y=None):
+        """Fit encoder according to X and y.
+        """
+        return self
+
+    def transform(self, X, y=None):
+        """Perform the transformation to new categorical data.
+        """
+        return X
+
+    def _find_Vgroups(self, V_variables):
+        """Recover groups of Vesta features which are null together
+        """
+        na_value = X[V_variables].isnull().sum()
+        na_list = na_value.unique()
+        na_value = na_value.to_dict()
+        cols_same_null = []
+        for i in range(len(na_list)):
+            cols_same_null.append([k for k, v in na_value.items() if v == na_list[i]])
+        return cols_same_null
 
     def pca(self, ds, n_dim=0.9):
         pca = PCA(n_components=n_dim, random_state=42)

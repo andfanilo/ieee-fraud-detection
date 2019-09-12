@@ -54,8 +54,8 @@
   "lgb_test": {
     "classifier": "lgb",
     "params": {
-      "n_estimators": 500,
-      "early_stopping_rounds": 20,
+      "n_estimators": 5000,
+      "early_stopping_rounds": 70,
       "num_leaves": 256,
       "learning_rate": 0.03,
       "max_depth": 9,

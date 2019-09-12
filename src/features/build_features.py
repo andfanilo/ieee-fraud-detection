@@ -4,7 +4,6 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-from src.features.reduce_dimensions import VestaReducer
 from src.features.utils import calc_smooth_mean
 
 logger = logging.getLogger(__name__)
@@ -15,15 +14,10 @@ logger = logging.getLogger(__name__)
 
 def clean_inf_nan(ds):
     # by https://www.kaggle.com/dimartinot
-    # inf_cols_train = ds.X_train.columns.to_series()[np.isinf(ds.X_train).any()]
-    # inf_cols_test = ds.X_test.columns.to_series()[np.isinf(ds.X_test).any()]
     ds.X_train.replace([np.inf, -np.inf], np.nan, inplace=True)
     ds.X_test.replace([np.inf, -np.inf], np.nan, inplace=True)
 
     logger.info("Infinites were cleaned")
-
-    # logger.info("Following columns contained infinity values that were replaced by NAN")
-    # logger.info(", ".join(list(set(inf_cols_train + inf_cols_test))))
 
 
 def clean_noise_cards(ds, valid_counts=2):
@@ -47,11 +41,8 @@ def clean_noise_cards(ds, valid_counts=2):
 ########################### IDENTITY COLUMNS PROCESSING
 
 
-def process_identity(ds):
+def id_31_check_latest_browser(ds):
     for df in [ds.X_train, ds.X_test]:
-        # id_01 to id_11 are numeric
-        df["id_02_log"] = np.log(df["id_02"])
-
         # check latest browser with id_31
         # https://www.kaggle.com/amirhmi/a-complete-feature-engineering-with-lgbm
         df["lastest_browser"] = np.zeros(df.shape[0])
@@ -75,28 +66,104 @@ def process_identity(ds):
         df.loc[df["id_31"] == "chrome 66.0 for android", "lastest_browser"] = 1
         df.loc[df["id_31"] == "chrome 66.0 for ios", "lastest_browser"] = 1
 
+
+def clean_id_31(ds):
+    for df in [ds.X_train, ds.X_test]:
+        # Extract browser and version beforehand
+        # df["id_31_browser"] = df["id_31"].str.split(" ", expand=True)[0]
+        # df["id_31_version"] = df["id_31"].str.split(" ", expand=True)[1]
+
+        # Clean id_31, this stays categorical
+        df["id_31"] = df["id_31"].str.replace("([0-9\.])", "")
+        df["id_31"][df["id_31"].str.contains("chrome", regex=False) == True] = "chrome"
+        df["id_31"][
+            df["id_31"].str.contains("Samsung", regex=False) == True
+        ] = "samsung"
+        df["id_31"][
+            df["id_31"].str.contains("samsung", regex=False) == True
+        ] = "samsung"
+        df["id_31"][
+            df["id_31"].str.contains("firefox", regex=False) == True
+        ] = "firefox"
+        df["id_31"][df["id_31"].str.contains("safari", regex=False) == True] = "safari"
+        df["id_31"][df["id_31"].str.contains("opera", regex=False) == True] = "opera"
+        df["id_31"] = df["id_31"].str.replace(" ", "")
+        df.loc[
+            df["id_31"].str.contains("Generic/Android", na=False), "id_31"
+        ] = "android"
+        df.loc[
+            df["id_31"].str.contains("androidbrowser", na=False), "id_31"
+        ] = "android"
+        df.loc[
+            df["id_31"].str.contains("androidwebview", na=False), "id_31"
+        ] = "android"
+        df.loc[df["id_31"].str.contains("android", na=False), "id_31"] = "android"
+        df.loc[df["id_31"].str.contains("chromium", na=False), "id_31"] = "chrome"
+        df.loc[df["id_31"].str.contains("google", na=False), "id_31"] = "chrome"
+        df.loc[
+            df["id_31"].str.contains("googlesearchapplication", na=False), "id_31"
+        ] = "chrome"
+        df.loc[df["id_31"].str.contains("iefordesktop", na=False), "id_31"] = "ie"
+        df.loc[df["id_31"].str.contains("iefortablet", na=False), "id_31"] = "ie"
+        df.loc[
+            df.id_31.isin(df.id_31.value_counts()[df.id_31.value_counts() < 20].index),
+            "id_31",
+        ] = "rare"
+
+        ########################### Browser
+        df["id_31"] = df["id_31"].fillna("unknown_device").str.lower()
+        df["id_31_device"] = df["id_31"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+
+    ds.add_categorical_cols(
+        [
+            # "id_31_browser",
+            # "id_31_version",
+            "id_31_device"
+        ]
+    )
+
     logger.info("Identity cols were processed")
 
 
-def parse_device(ds):
+def parse_id_30(ds):
+    for df in [ds.X_train, ds.X_test]:
+        df["id_30_OS"] = df["id_30"].str.split(" ", expand=True)[0]
+        df["id_30_version"] = df["id_30"].str.split(" ", expand=True)[1]
+
+        df["is_win8_vista"] = (df.id_30_OS == "Windows") & (
+            (df.id_30_version == "8") | (df.id_30_version == "Vista")
+        )
+        df["is_win8_vista"] = df["is_win8_vista"].astype(int)
+        df["is_windows_otheros"] = (df.DeviceInfo == "Windows") & (
+            (df.id_30_OS == "Linux") | (df.id_30_OS == "other")
+        )
+        df["is_windows_otheros"] = df["is_windows_otheros"].astype(int)
+
+        df.drop("id_30_OS", axis=1, inplace=True)
+        df.drop("id_30_version", axis=1, inplace=True)
+
+        df["id_30"] = df["id_30"].fillna("unknown_device").str.lower()
+        df["id_30_os"] = df["id_30"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+        df["id_30_version"] = df["id_30"].apply(
+            lambda x: "".join([i for i in x if i.isnumeric()])
+        )
+
+    ds.add_categorical_cols(
+        ["is_win8_vista", "is_windows_otheros", "id_30_os", "id_30_version"]
+    )
+
+
+def parse_device_info(ds):
     """
     https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
     """
     for df in [ds.X_train, ds.X_test]:
         df["device_name"] = df["DeviceInfo"].str.split("/", expand=True)[0]
-        df["device_version"] = df["DeviceInfo"].str.split("/", expand=True)[1]
-
-        df["OS_id_30"] = df["id_30"].str.split(" ", expand=True)[0]
-        df["version_id_30"] = df["id_30"].str.split(" ", expand=True)[1]
-
-        df["browser_id_31"] = df["id_31"].str.split(" ", expand=True)[0]
-        df["version_id_31"] = df["id_31"].str.split(" ", expand=True)[1]
-
-        df["screen_width"] = df["id_33"].str.split("x", expand=True)[0]
-        df["screen_height"] = df["id_33"].str.split("x", expand=True)[1]
-
-        df["id_34"] = df["id_34"].str.split(":", expand=True)[1]
-        df["id_23"] = df["id_23"].str.split(":", expand=True)[1]
+        # df["device_version"] = df["DeviceInfo"].str.split("/", expand=True)[1]
 
         df.loc[
             df["device_name"].str.contains("SM", na=False), "device_name"
@@ -139,30 +206,43 @@ def parse_device(ds):
                 df.device_name.value_counts()[df.device_name.value_counts() < 200].index
             ),
             "device_name",
-        ] = "Others"
-        df["had_id"] = 1
+        ] = "rare"
+
+        df["DeviceInfo"] = df["DeviceInfo"].fillna("unknown_device").str.lower()
+        df["deviceInfo_device"] = df["DeviceInfo"].apply(
+            lambda x: "".join([i for i in x if i.isalpha()])
+        )
+        df["deviceInfo_version"] = df["DeviceInfo"].apply(
+            lambda x: "".join([i for i in x if i.isnumeric()])
+        )
 
     ds.add_categorical_cols(
         [
             "device_name",
-            "device_version",
-            "OS_id_30",
-            "version_id_30",
-            "browser_id_31",
-            "version_id_31",
-            "screen_width",
-            "screen_height",
+            # "device_version",
+            "deviceInfo_device",
+            "deviceInfo_version",
         ]
     )
 
-    logger.info("Devices were transformed")
+    logger.info("DeviceInfo were parsed")
+
+
+def id_33_extract_screen_resolution(ds):
+    for df in [ds.X_train, ds.X_test]:
+        df["screen_width"] = df["id_33"].str.split("x", expand=True)[0]
+        df["screen_height"] = df["id_33"].str.split("x", expand=True)[1]
+
+    ds.add_categorical_cols(["screen_width", "screen_height"])
+
+    logger.info("Screen resolution extracted")
 
 
 ########################### TRANSACTION COLUMNS PROCESSING
 
 
-def buildUUID(ds):
-    # Let's add some kind of client uID based on cardID ad addr columns
+def build_uid(ds):
+    # Let's add some kind of client uID based on cardID and addr columns
     # The value will be very specific for each client so we need to remove it
     # from final feature. But we can use it for aggregations.
     for df in [ds.X_train, ds.X_test]:
@@ -174,13 +254,8 @@ def buildUUID(ds):
             + "_"
             + df["card5"].astype(str)
         )
-        df["uid3"] = (
-            df["uid2"].astype(str)
-            + "_"
-            + df["addr1"].astype(str)
-            + "_"
-            + df["addr2"].astype(str)
-        )
+        df["uid3"] = df["uid2"].astype(str) + "_" + df["addr1"].astype(str)
+        df["uid4"] = df["uid3"].astype(str) + "_" + df["P_emaildomain"].astype(str)
 
     logger.info("UUIDs were built")
 
@@ -361,40 +436,14 @@ def transform_emails_and_domains(ds):
                 lambda x: x if str(x) not in us_emails else "us"
             )
 
-        df["DeviceInfo"] = df["DeviceInfo"].fillna("unknown_device").str.lower()
-        df["DeviceInfo_device"] = df["DeviceInfo"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-        df["DeviceInfo_version"] = df["DeviceInfo"].apply(
-            lambda x: "".join([i for i in x if i.isnumeric()])
-        )
-
-        ########################### Device info 2
-        df["id_30"] = df["id_30"].fillna("unknown_device").str.lower()
-        df["id_30_device"] = df["id_30"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-        df["id_30_version"] = df["id_30"].apply(
-            lambda x: "".join([i for i in x if i.isnumeric()])
-        )
-
-        ########################### Browser
-        df["id_31"] = df["id_31"].fillna("unknown_device").str.lower()
-        df["id_31_device"] = df["id_31"].apply(
-            lambda x: "".join([i for i in x if i.isalpha()])
-        )
-
     ds.add_categorical_cols(
         [
             "P_emaildomain_bin",
             "P_emaildomain_suffix",
             "R_emaildomain_bin",
             "R_emaildomain_suffix",
-            "DeviceInfo_device",
-            "DeviceInfo_version",
             "id_30_device",
             "id_30_version",
-            "id_31_device",
         ]
     )
 
@@ -643,9 +692,8 @@ def remove_numerous_categories(ds):
     logger.info(", ".join(remove_cat_col))
 
 
-def drop_temp_cols(ds):
+def drop_user_generated_cols(ds):
     rm_cols = [
-        "TransactionDT",  # These columns are pure noise right now
         "uid",
         "uid2",
         "uid3",  # Our new client uID -> very noisy data
@@ -659,9 +707,6 @@ def drop_temp_cols(ds):
         "DT_D_total",
         "DT_W_total",
         "DT_M_total",
-        "id_30",
-        "id_31",
-        "id_33",
     ]
     for df in [ds.X_train, ds.X_test]:
         df.drop(rm_cols, axis=1, inplace=True)
@@ -672,7 +717,7 @@ def drop_temp_cols(ds):
     logger.info(", ".join(rm_cols))
 
 
-def drop_cols(ds):
+def drop_cols_auto(ds):
     one_value_cols = [
         col for col in ds.X_train.columns if ds.X_train[col].nunique() <= 1
     ]
@@ -702,6 +747,14 @@ def drop_cols(ds):
         if ds.X_test[col].value_counts(dropna=False, normalize=True).values[0] > 0.9
     ]
 
+    # for col in ds.categorical_cols:
+    #    num_unique_values = ds.X_train[col].append(ds.X_test[col]).nunique()
+    #    num_total_values = ds.X_train[col].shape[0] + ds.X_test[col].shape[0]
+
+    #    # if num_unique_values / num_total_values > 0.5:
+    #    # should do some binning I think
+    #    # remove_cat_col.append(col)
+
     cols_to_drop = list(
         set(
             many_null_cols
@@ -722,14 +775,37 @@ def drop_cols(ds):
     logger.info(", ".join(cols_to_drop))
 
 
+def drop_cols_manual(ds):
+    rm_cols = [
+        "TransactionDT",
+        "id_30",
+        "id_31",
+        "id_33",
+        "DeviceInfo",
+    ]  # + ds.identity_cols
+    for df in [ds.X_train, ds.X_test]:
+        df.drop(rm_cols, axis=1, inplace=True)
+
+    ds.remove_categorical_cols(rm_cols)
+
+    logger.info("Manual columns were dropped")
+    logger.info(", ".join(rm_cols))
+
+
 def build_processed_dataset(ds):
-    # clean_inf_nan(ds)
-    # clean_noise_cards(ds)
+    clean_inf_nan(ds)  # 0.910084 - baseline
 
-    # process_identity(ds)
-    # parse_device(ds)
+    # --- Not useful
+    # clean_noise_cards(ds) # lowers to 0.907435 - removed for now
+    # id_31_check_latest_browser(ds) # lowers to 0.907111 - removed for now
+    # id_33_extract_screen_resolution(ds)
 
-    # buildUUID(ds)
+    # the following 3 gets us to 0.90979, I'd keep them to lower dimensions
+    clean_id_31(ds)
+    parse_id_30(ds)
+    parse_device_info(ds)
+
+    # build_uid(ds)
     # build_date_features(ds)
     # transform_amount(ds)
     # transform_productCD(ds)
@@ -741,18 +817,11 @@ def build_processed_dataset(ds):
     # count_encoding(ds)
     # frequency_encoding(ds)
 
-    # ds.X_train.drop(ds.identity_cols, axis=1, inplace=True)
-    # ds.X_test.drop(ds.identity_cols, axis=1, inplace=True)
-    # ds.remove_categorical_cols(ds.identity_cols_categorical)
-
-    ds.X_train.drop("TransactionDT", axis=1, inplace=True)
-    ds.X_test.drop("TransactionDT", axis=1, inplace=True)
+    # drop_user_generated_cols(ds)
+    # drop_cols_auto(ds)
+    drop_cols_manual(ds)
 
     label_encoding(ds)
-    # remove_numerous_categories(ds)
-
-    # drop_temp_cols(ds)
-    # drop_cols(ds)
 
 
 def impute_mean(X_train, y_train, X_valid, y_valid, X_test):

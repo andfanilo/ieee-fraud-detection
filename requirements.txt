@@ -9,7 +9,6 @@ click
 colorama
 imbalanced-learn
 impyute
-interpret
 isort
 fancyimpute
 featuretools
@@ -21,7 +20,6 @@ lens
 lightgbm
 line-profiler
 missingno
-mlflow
 numba
 numpy
 orderedmultidict
@@ -40,6 +38,7 @@ shap
 statsmodels
 tensorflow
 termcolor
+tsfresh
 tpot
 tqdm
 umap-learn
