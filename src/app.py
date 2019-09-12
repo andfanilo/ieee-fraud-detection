@@ -45,7 +45,7 @@ def run_experiment(version, key):
     preprocessors = {"lgb": convert_category_cols_lgb}
     preprocessors_fold = {
         "logistic": process_fold,
-        "lgb": None,
+        "lgb": process_fold,
         "xgb": None,
         "catboost": None,
     }

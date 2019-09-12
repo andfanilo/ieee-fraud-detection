@@ -3,73 +3,424 @@ import pandas as pd
 import umap
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 
 
 class VestaTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, V_features):
+    """All V features should be transformed inside this class
+    """
+
+    def __init__(self):
         """
         Reduce Vesta features
         """
-        self.V_features = (
-            V_features
-        )  # [col for col in ds.X_train.columns.values if col[0] == "V"]
-        self.V_groups = self._find_Vgroups(self.V_features)
-
-        self.X_train = ds.X_train[self.V_features].copy().values.astype("float32")
-        self.X_test = ds.X_test[self.V_features].copy().values.astype("float32")
-        self.y_train = ds.y_train.copy().reset_index()["isFraud"]
-
-        # Mostly count or ranking so can replace NaN by -1
-        self.X_train[np.isnan(self.X_train)] = -1
-        self.X_test[np.isnan(self.X_test)] = -1
+        self.V_features = [f"V{i}" for i in range(1, 340)]
+        self.V_groups = [
+            ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11"],
+            [
+                "V12",
+                "V13",
+                "V14",
+                "V15",
+                "V16",
+                "V17",
+                "V18",
+                "V19",
+                "V20",
+                "V21",
+                "V22",
+                "V23",
+                "V24",
+                "V25",
+                "V26",
+                "V27",
+                "V28",
+                "V29",
+                "V30",
+                "V31",
+                "V32",
+                "V33",
+                "V34",
+            ],
+            [
+                "V35",
+                "V36",
+                "V37",
+                "V38",
+                "V39",
+                "V40",
+                "V41",
+                "V42",
+                "V43",
+                "V44",
+                "V45",
+                "V46",
+                "V47",
+                "V48",
+                "V49",
+                "V50",
+                "V51",
+                "V52",
+            ],
+            [
+                "V53",
+                "V54",
+                "V55",
+                "V56",
+                "V57",
+                "V58",
+                "V59",
+                "V60",
+                "V61",
+                "V62",
+                "V63",
+                "V64",
+                "V65",
+                "V66",
+                "V67",
+                "V68",
+                "V69",
+                "V70",
+                "V71",
+                "V72",
+                "V73",
+                "V74",
+            ],
+            [
+                "V75",
+                "V76",
+                "V77",
+                "V78",
+                "V79",
+                "V80",
+                "V81",
+                "V82",
+                "V83",
+                "V84",
+                "V85",
+                "V86",
+                "V87",
+                "V88",
+                "V89",
+                "V90",
+                "V91",
+                "V92",
+                "V93",
+                "V94",
+            ],
+            [
+                "V95",
+                "V96",
+                "V97",
+                "V98",
+                "V99",
+                "V100",
+                "V101",
+                "V102",
+                "V103",
+                "V104",
+                "V105",
+                "V106",
+                "V107",
+                "V108",
+                "V109",
+                "V110",
+                "V111",
+                "V112",
+                "V113",
+                "V114",
+                "V115",
+                "V116",
+                "V117",
+                "V118",
+                "V119",
+                "V120",
+                "V121",
+                "V122",
+                "V123",
+                "V124",
+                "V125",
+                "V126",
+                "V127",
+                "V128",
+                "V129",
+                "V130",
+                "V131",
+                "V132",
+                "V133",
+                "V134",
+                "V135",
+                "V136",
+                "V137",
+            ],
+            [
+                "V138",
+                "V139",
+                "V140",
+                "V141",
+                "V142",
+                "V146",
+                "V147",
+                "V148",
+                "V149",
+                "V153",
+                "V154",
+                "V155",
+                "V156",
+                "V157",
+                "V158",
+                "V161",
+                "V162",
+                "V163",
+            ],
+            [
+                "V143",
+                "V144",
+                "V145",
+                "V150",
+                "V151",
+                "V152",
+                "V159",
+                "V160",
+                "V164",
+                "V165",
+                "V166",
+            ],
+            [
+                "V167",
+                "V168",
+                "V172",
+                "V173",
+                "V176",
+                "V177",
+                "V178",
+                "V179",
+                "V181",
+                "V182",
+                "V183",
+                "V186",
+                "V187",
+                "V190",
+                "V191",
+                "V192",
+                "V193",
+                "V196",
+                "V199",
+                "V202",
+                "V203",
+                "V204",
+                "V205",
+                "V206",
+                "V207",
+                "V211",
+                "V212",
+                "V213",
+                "V214",
+                "V215",
+                "V216",
+            ],
+            [
+                "V169",
+                "V170",
+                "V171",
+                "V174",
+                "V175",
+                "V180",
+                "V184",
+                "V185",
+                "V188",
+                "V189",
+                "V194",
+                "V195",
+                "V197",
+                "V198",
+                "V200",
+                "V201",
+                "V208",
+                "V209",
+                "V210",
+            ],
+            [
+                "V217",
+                "V218",
+                "V219",
+                "V223",
+                "V224",
+                "V225",
+                "V226",
+                "V228",
+                "V229",
+                "V230",
+                "V231",
+                "V232",
+                "V233",
+                "V235",
+                "V236",
+                "V237",
+                "V240",
+                "V241",
+                "V242",
+                "V243",
+                "V244",
+                "V246",
+                "V247",
+                "V248",
+                "V249",
+                "V252",
+                "V253",
+                "V254",
+                "V257",
+                "V258",
+                "V260",
+                "V261",
+                "V262",
+                "V263",
+                "V264",
+                "V265",
+                "V266",
+                "V267",
+                "V268",
+                "V269",
+                "V273",
+                "V274",
+                "V275",
+                "V276",
+                "V277",
+                "V278",
+            ],
+            [
+                "V220",
+                "V221",
+                "V222",
+                "V227",
+                "V234",
+                "V238",
+                "V239",
+                "V245",
+                "V250",
+                "V251",
+                "V255",
+                "V256",
+                "V259",
+                "V270",
+                "V271",
+                "V272",
+            ],
+            [
+                "V279",
+                "V280",
+                "V284",
+                "V285",
+                "V286",
+                "V287",
+                "V290",
+                "V291",
+                "V292",
+                "V293",
+                "V294",
+                "V295",
+                "V297",
+                "V298",
+                "V299",
+                "V302",
+                "V303",
+                "V304",
+                "V305",
+                "V306",
+                "V307",
+                "V308",
+                "V309",
+                "V310",
+                "V311",
+                "V312",
+                "V316",
+                "V317",
+                "V318",
+                "V319",
+                "V320",
+                "V321",
+            ],
+            [
+                "V281",
+                "V282",
+                "V283",
+                "V288",
+                "V289",
+                "V296",
+                "V300",
+                "V301",
+                "V313",
+                "V314",
+                "V315",
+            ],
+            [
+                "V322",
+                "V323",
+                "V324",
+                "V325",
+                "V326",
+                "V327",
+                "V328",
+                "V329",
+                "V330",
+                "V331",
+                "V332",
+                "V333",
+                "V334",
+                "V335",
+                "V336",
+                "V337",
+                "V338",
+                "V339",
+            ],
+        ]
+        self.reducer_groups = []
 
     def fit(self, X, y=None):
         """Fit encoder according to X and y.
         """
+        # self.V_groups = self._find_Vgroups(X) # if you don't trust hardcoded V group
+        train = X[self.V_features].copy()
+        train[np.isnan(train)] = -1
+
+        for group in self.V_groups:
+            self.reducer_groups.append(self._pca(train[group]))
+
         return self
 
     def transform(self, X, y=None):
-        """Perform the transformation to new categorical data.
+        """Perform the transformation.
         """
-        return X
+        # Mostly count or ranking so can replace NaN by -1
+        df = X.copy()
+        df[self.V_features] = df[self.V_features].fillna(-1)
 
-    def _find_Vgroups(self, V_variables):
+        for i, group in enumerate(self.V_groups):
+            pca = self.reducer_groups[i]
+            df_pca = pca.transform(df[group])
+            for component in range(pca.n_components_):
+                col = f"Vgroup_{i}_{component}"
+                df[col] = df_pca[:, component]
+
+        df = df.drop(self.V_features, axis=1)
+        return df
+
+    def _pca(self, X, n_dim=0.95):
+        pca = PCA(n_components=n_dim, random_state=42)
+        pca.fit(X)
+        return pca
+
+    def _umap(self, X, y=None, n_components=40):
+        reducer = umap.UMAP(n_components=n_components, random_state=42)
+        reducer.fit(X, y=y)
+        return reducer
+
+    def _find_Vgroups(self, X):
         """Recover groups of Vesta features which are null together
         """
-        na_value = X[V_variables].isnull().sum()
+        na_value = X[self.V_features].isnull().sum()
         na_list = na_value.unique()
         na_value = na_value.to_dict()
         cols_same_null = []
         for i in range(len(na_list)):
             cols_same_null.append([k for k, v in na_value.items() if v == na_list[i]])
         return cols_same_null
-
-    def pca(self, ds, n_dim=0.9):
-        pca = PCA(n_components=n_dim, random_state=42)
-        pca.fit(self.X_train)
-        X_train_pca = pca.transform(self.X_train)
-        X_test_pca = pca.transform(self.X_test)
-
-        for i in range(pca.n_components_):
-            col = f"V{i}_pca"
-            ds.X_train[col] = X_train_pca[:, i]
-            ds.X_test[col] = X_test_pca[:, i]
-
-    def umap(self, ds, n_components=40):
-        reducer = umap.UMAP(n_components=n_components, random_state=42)
-        reducer.fit(self.X_train, y=self.y_train)
-        X_train_umap = reducer.transform(self.X_train)
-        X_test_umap = reducer.transform(self.X_test)
-
-        for i in range(n_components):
-            col = f"V{i}_umap"
-            ds.X_train[col] = X_train_umap[:, i]
-            ds.X_test[col] = X_test_umap[:, i]
-
-    def drop_v_cols(self, ds):
-        """
-        Drop original columns at the end
-        """
-        ds.X_train = ds.X_train.drop(self.V_features, axis=1)
-        ds.X_test = ds.X_test.drop(self.V_features, axis=1)

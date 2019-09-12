@@ -6,7 +6,12 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
-from src.visualization.utils import rand_jitter, value_counts, value_counts_byfraud
+from src.visualization.utils import (
+    heatmap,
+    rand_jitter,
+    value_counts,
+    value_counts_byfraud,
+)
 
 KDE_LW = 0.5
 
@@ -61,6 +66,58 @@ def hist_isfraud(X_train, col, bins):
     ax2.set_title(f"Distribution of fraud {col}")
 
     fig.show()
+
+
+def plot_correlation_matrix(df, cols):
+    fig, ax = plt.subplots(figsize=(16, 12))
+
+    # Compute the correlation matrix
+    corr = df[cols].corr()
+
+    # Generate a mask for the upper triangle
+    mask = np.zeros_like(corr, dtype=np.bool)
+    mask[np.triu_indices_from(mask)] = True
+
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    sns.heatmap(
+        corr,
+        mask=mask,
+        annot=True,
+        fmt=".2f",
+        cmap=cmap,
+        vmin=-1,
+        vmax=1,
+        center=0,
+        square=True,
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.5},
+        ax=ax,
+    )
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment="right")
+    fig.show()
+
+
+def corrplot(df, cols, size_scale=500, marker="s"):
+    """Better looking correlation heatmap from https://github.com/drazenz/heatmap/blob/master/heatmap.py
+    """
+    plt.figure(figsize=(10, 10))
+    data = df[cols].corr()
+    corr = pd.melt(data.reset_index(), id_vars="index")
+    corr.columns = ["x", "y", "value"]
+    heatmap(
+        corr["x"],
+        corr["y"],
+        color=corr["value"],
+        color_range=[-1, 1],
+        palette=sns.diverging_palette(20, 220, n=256),
+        size=corr["value"].abs(),
+        size_range=[0, 1],
+        marker=marker,
+        x_order=data.columns,
+        y_order=data.columns[::-1],
+        size_scale=size_scale,
+    )
+    plt.show()
 
 
 def plot_jitter(x, y, **kwargs):

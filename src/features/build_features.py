@@ -3,8 +3,9 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from src.features.utils import calc_smooth_mean
+from src.features.vesta_transformer import VestaTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -833,7 +834,16 @@ def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
 
 
 def process_fold(X_train, y_train, X_valid, y_valid, X_test):
-    X_train, y_train, X_valid, y_valid, X_test = impute_mean(
-        X_train, y_train, X_valid, y_valid, X_test
-    )
+    # PCA reduction of V columns - gets us from 0.90979 to 0.907806
+    vt = VestaTransformer()
+    vt.fit(X_train)
+    X_train = vt.transform(X_train)
+    X_valid = vt.transform(X_valid)
+    X_test = vt.transform(X_test)
+
+    # X_train, y_train, X_valid, y_valid, X_test = impute_mean(
+    #    X_train, y_train, X_valid, y_valid, X_test
+    # )
+
+    logger.info("Fold was preprocessed correctly")
     return X_train, y_train, X_valid, y_valid, X_test
