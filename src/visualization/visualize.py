@@ -95,6 +95,61 @@ def save_pairplots(X, cols, folder, jitter=False):
         plt.close()
 
 
+def make_ts_heatmap(source_df, querystr, display_fraud=False, verbose=False):
+    width = 480
+    height = 183
+    img_size = width * height
+    seconds_per_pixel = 180
+
+    df = source_df.query(querystr, engine="python")  # filter rows given query string
+    if verbose:
+        print(querystr, df.shape[0], "transactions")
+    ts = (
+        df.TransactionDT // seconds_per_pixel
+    ).values  # store for each transaction where it should add 1 to image
+    c = np.zeros(img_size, dtype=int)
+    if display_fraud:
+        np.add.at(c, ts, df.isFraud)
+    else:
+        np.add.at(c, ts, 1)
+    return c.reshape((height, width))
+
+
+def prepare_ts_heatmap_plot(source_df, querystr, display_fraud=False):
+    width = 480
+    height = 183
+    day_marker = 10
+
+    xlabels = [f"{h}am" for h in range(12)] + [f"{h}pm" for h in range(12)]
+    xlabels[12] = "12pm"
+    ylabels = [f"day{i}" for i in range(0, height, day_marker)]
+    plt.rcParams["figure.figsize"] = (15, 5)
+    plt.rcParams["image.cmap"] = "afmhot"
+
+    fig, ax = plt.subplots(figsize=(18, 6))
+    p = make_ts_heatmap(source_df, querystr, display_fraud=display_fraud, verbose=True)
+    c = ax.pcolormesh(p)
+    ax.invert_yaxis()
+    ax.set_xticks(np.arange(0, width, 20), False)
+    ax.set_xticklabels(xlabels)
+    ax.set_yticks(range(0, height, day_marker))
+    ax.set_yticklabels(ylabels)
+    ax.set_title(querystr)
+    cbar = fig.colorbar(c, ax=ax)
+    return fig
+
+
+def show_ts_heatmap(source_df, querystr, display_fraud=False):
+    fig = prepare_ts_heatmap_plot(source_df, querystr, display_fraud)
+    return plt.tight_layout()
+
+
+def save_ts_heatmap(source_df, querystr, path, display_fraud=False):
+    fig = prepare_ts_heatmap_plot(source_df, querystr, display_fraud)
+    fig.savefig(path)
+    plt.close()
+
+
 def grid_distplot(X, quantitative_cols):
     f = pd.melt(X, value_vars=quantitative_cols)
     g = sns.FacetGrid(f, col="variable", col_wrap=4, sharex=False, sharey=False, size=4)
