@@ -19,5 +19,7 @@ def calc_smooth_mean(df, by, on, m):
 
 def convert_category_cols_lgb(ds):
     for col in ds.categorical_cols:
-        ds.X_train[col] = ds.X_train[col].fillna(-1).astype("category")
-        ds.X_test[col] = ds.X_test[col].fillna(-1).astype("category")
+        # we probably don't need to turn everything to type category, should investigate
+        # dropping category type : 0.907806 -> 0.916225
+        ds.X_train[col] = ds.X_train[col].fillna(-999)  # .astype("category")
+        ds.X_test[col] = ds.X_test[col].fillna(-999)  # .astype("category")

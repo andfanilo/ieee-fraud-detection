@@ -834,7 +834,7 @@ def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
 
 
 def process_fold(X_train, y_train, X_valid, y_valid, X_test):
-    # PCA reduction of V columns - gets us from 0.90979 to 0.907806
+    # PCA reduction of V columns - helps when other columns are not converted to category
     vt = VestaTransformer()
     vt.fit(X_train)
     X_train = vt.transform(X_train)
