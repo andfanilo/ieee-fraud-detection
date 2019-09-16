@@ -3,14 +3,10 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from src.features.utils import calc_smooth_mean
-from src.features.vesta_transformer import VestaTransformer
+from sklearn.preprocessing import LabelEncoder
+from src.features.utils import num_after_point
 
 logger = logging.getLogger(__name__)
-
-
-########################### GENERAL CLEANING
 
 
 def clean_inf_nan(ds):
@@ -35,11 +31,9 @@ def clean_noise_cards(ds, valid_counts=2):
         ds.X_test["card1"].isin(valid_card), ds.X_test["card1"], np.nan
     )
 
-    logger.info("Following card1 values were dropped")
-    logger.info(", ".join([str(card) for card in valid_card]))
-
-
-########################### IDENTITY COLUMNS PROCESSING
+    logger.info(
+        f"Noise card1 (less than {valid_counts} counts in training) were dropped"
+    )
 
 
 def id_31_check_latest_browser(ds):
@@ -125,7 +119,7 @@ def clean_id_31(ds):
         ]
     )
 
-    logger.info("Identity cols were processed")
+    logger.info("id_31 were processed")
 
 
 def parse_id_30(ds):
@@ -157,6 +151,8 @@ def parse_id_30(ds):
         ["is_win8_vista", "is_windows_otheros", "id_30_os", "id_30_version"]
     )
 
+    logger.info("Parsed id_30")
+
 
 def parse_device_info(ds):
     """
@@ -164,7 +160,7 @@ def parse_device_info(ds):
     """
     for df in [ds.X_train, ds.X_test]:
         df["device_name"] = df["DeviceInfo"].str.split("/", expand=True)[0]
-        # df["device_version"] = df["DeviceInfo"].str.split("/", expand=True)[1]
+        df["device_version"] = df["DeviceInfo"].str.split("/", expand=True)[1]
 
         df.loc[
             df["device_name"].str.contains("SM", na=False), "device_name"
@@ -218,12 +214,7 @@ def parse_device_info(ds):
         )
 
     ds.add_categorical_cols(
-        [
-            "device_name",
-            # "device_version",
-            "deviceInfo_device",
-            "deviceInfo_version",
-        ]
+        ["device_name", "device_version", "deviceInfo_device", "deviceInfo_version"]
     )
 
     logger.info("DeviceInfo were parsed")
@@ -231,59 +222,15 @@ def parse_device_info(ds):
 
 def id_33_extract_screen_resolution(ds):
     for df in [ds.X_train, ds.X_test]:
-        df["screen_width"] = df["id_33"].str.split("x", expand=True)[0]
-        df["screen_height"] = df["id_33"].str.split("x", expand=True)[1]
-
-    ds.add_categorical_cols(["screen_width", "screen_height"])
+        df["screen_width"] = (
+            df["id_33"].str.split("x", expand=True)[0].fillna(0).astype(int)
+        )
+        df["screen_height"] = (
+            df["id_33"].str.split("x", expand=True)[1].fillna(0).astype(int)
+        )
+        df["screen_resolution"] = np.sqrt(df["screen_width"] * df["screen_height"])
 
     logger.info("Screen resolution extracted")
-
-
-########################### TRANSACTION COLUMNS PROCESSING
-
-
-def build_uid(ds):
-    # Let's add some kind of client uID based on cardID and addr columns
-    # The value will be very specific for each client so we need to remove it
-    # from final feature. But we can use it for aggregations.
-    for df in [ds.X_train, ds.X_test]:
-        df["uid"] = df["card1"].astype(str) + "_" + df["card2"].astype(str)
-        df["uid2"] = (
-            df["uid"].astype(str)
-            + "_"
-            + df["card3"].astype(str)
-            + "_"
-            + df["card5"].astype(str)
-        )
-        df["uid3"] = df["uid2"].astype(str) + "_" + df["addr1"].astype(str)
-        df["uid4"] = df["uid3"].astype(str) + "_" + df["P_emaildomain"].astype(str)
-
-    logger.info("UUIDs were built")
-
-
-def build_date_features(ds, start_date="2017-11-30"):
-    """
-    Preprocess TransactionDT
-    """
-    # Temporary
-    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-
-    for df in [ds.X_train, ds.X_test]:
-        df["DT"] = df["TransactionDT"].apply(
-            lambda x: (start_date + datetime.timedelta(seconds=x))
-        )
-        df["DT_M"] = (df["DT"].dt.year - 2017) * 12 + df["DT"].dt.month
-        df["DT_W"] = (df["DT"].dt.year - 2017) * 52 + df["DT"].dt.weekofyear
-        df["DT_D"] = (df["DT"].dt.year - 2017) * 365 + df["DT"].dt.dayofyear
-
-        df["DT_hour"] = df["DT"].dt.hour
-        df["DT_day_week"] = df["DT"].dt.dayofweek
-        df["DT_day"] = df["DT"].dt.day
-
-        # D9 is an hour
-        df["D9"] = np.where(df["D9"].isna(), 0, 1)
-
-    logger.info("Built date features")
 
 
 def transform_amount(ds):
@@ -292,52 +239,45 @@ def transform_amount(ds):
     """
     for df in [ds.X_train, ds.X_test]:
         # decimal part of the transaction amount.
-        df["TransactionAmt_decimal"] = (
-            (df["TransactionAmt"] - df["TransactionAmt"].astype(int)) * 1000
-        ).astype(int)
+        df["TransactionAmt_main"] = np.floor(df["TransactionAmt"])
+        df["TransactionAmt_cents"] = df["TransactionAmt"] - np.floor(
+            df["TransactionAmt"]
+        )
+
+        # Capture number of decimals
+        df["TransactionAmt_n_decimals"] = df["TransactionAmt"].apply(num_after_point)
+
+        # Capture 0, 50, 95 cents of ProductCD W
+        df["W_0_cents"] = np.zeros(df.shape[0])
+        df["W_50_cents"] = np.zeros(df.shape[0])
+        df["W_95_cents"] = np.zeros(df.shape[0])
+        df.loc[
+            (df["ProductCD"] == "W") & (np.round(df["TransactionAmt_cents"], 2) == 0),
+            "W_0_cents",
+        ] = 1
+        df.loc[
+            (df["ProductCD"] == "W") & (np.round(df["TransactionAmt_cents"], 2) == 0.5),
+            "W_50_cents",
+        ] = 1
+        df.loc[
+            (df["ProductCD"] == "W")
+            & (np.round(df["TransactionAmt_cents"], 2) == 0.95),
+            "W_95_cents",
+        ] = 1
 
         # log of transaction amount.
         df["TransactionAmt_Log"] = np.log1p(df["TransactionAmt"])
 
     # Check if the Transaction Amount is common or not (we can use freq encoding here)
     # In our dialog with a model we are telling to trust or not to these values
-    ds.X_train["TransactionAmt_check"] = np.where(
-        ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
-    )
-    ds.X_test["TransactionAmt_check"] = np.where(
-        ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
-    )
+    # ds.X_train["TransactionAmt_check"] = np.where(
+    #    ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
+    # )
+    # ds.X_test["TransactionAmt_check"] = np.where(
+    #    ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
+    # )
 
-    # For our model current TransactionAmt is a noise
-    # https://www.kaggle.com/kyakovlev/ieee-check-noise
-    # (even if features importances are telling contrariwise)
-    # There are many unique values and model doesn't generalize well
-    # Lets do some aggregations
-    i_cols = ["card1", "card2", "card3", "card5", "uid", "uid2", "uid3"]
-
-    for col in i_cols:
-        for agg_type in ["mean", "std"]:
-            new_col_name = col + "_TransactionAmt_" + agg_type
-            temp_df = pd.concat(
-                [
-                    ds.X_train[[col, "TransactionAmt"]],
-                    ds.X_test[[col, "TransactionAmt"]],
-                ]
-            )
-            temp_df = (
-                temp_df.groupby([col])["TransactionAmt"]
-                .agg([agg_type])
-                .reset_index()
-                .rename(columns={agg_type: new_col_name})
-            )
-
-            temp_df.index = list(temp_df[col])
-            temp_df = temp_df[new_col_name].to_dict()
-
-            ds.X_train[new_col_name] = ds.X_train[col].map(temp_df)
-            ds.X_test[new_col_name] = ds.X_test[col].map(temp_df)
-
-    logger.info("TransactionAmt was aggregated")
+    logger.info("TransactionAmt was worked heavily")
 
 
 def transform_productCD(ds):
@@ -443,8 +383,6 @@ def transform_emails_and_domains(ds):
             "P_emaildomain_suffix",
             "R_emaildomain_bin",
             "R_emaildomain_suffix",
-            "id_30_device",
-            "id_30_version",
         ]
     )
 
@@ -469,6 +407,81 @@ def encode_M_variables(ds):
         df["M4"] = df["M4"].map({"M0": 1, "M1": 2, "M2": 3})
 
     logger.info("M4 was label encoded")
+
+
+def build_uid(ds):
+    # Let's add some kind of client uID based on cardID and addr columns
+    # The value will be very specific for each client so we need to remove it
+    # from final feature. But we can use it for aggregations.
+    for df in [ds.X_train, ds.X_test]:
+        df["uid"] = df["card1"].astype(str) + "_" + df["card2"].astype(str)
+        df["uid2"] = (
+            df["uid"].astype(str)
+            + "_"
+            + df["card3"].astype(str)
+            + "_"
+            + df["card5"].astype(str)
+        )
+        df["uid3"] = df["uid2"].astype(str) + "_" + df["addr1"].astype(str)
+        df["uid4"] = df["uid3"].astype(str) + "_" + df["P_emaildomain"].astype(str)
+
+    logger.info("UUIDs were built")
+
+
+def build_date_features(ds, start_date="2017-11-30"):
+    """
+    Preprocess TransactionDT
+    """
+    # Temporary
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+
+    for df in [ds.X_train, ds.X_test]:
+        df["DT"] = df["TransactionDT"].apply(
+            lambda x: (start_date + datetime.timedelta(seconds=x))
+        )
+        df["DT_M"] = (df["DT"].dt.year - 2017) * 12 + df["DT"].dt.month
+        df["DT_W"] = (df["DT"].dt.year - 2017) * 52 + df["DT"].dt.weekofyear
+        df["DT_D"] = (df["DT"].dt.year - 2017) * 365 + df["DT"].dt.dayofyear
+
+        df["DT_hour"] = df["DT"].dt.hour
+        df["DT_day_week"] = df["DT"].dt.dayofweek
+        df["DT_day"] = df["DT"].dt.day
+
+        # D9 is an hour
+        df["D9"] = np.where(df["D9"].isna(), 0, 1)
+
+    logger.info("Built date features")
+
+
+def aggregate(ds):
+    # For our model current TransactionAmt is a noise
+    # https://www.kaggle.com/kyakovlev/ieee-check-noise
+    # (even if features importances are telling contrariwise)
+    # There are many unique values and model doesn't generalize well
+    # Lets do some aggregations
+    i_cols = ["card1", "card2", "card3", "card5", "uid", "uid2", "uid3", "uid4"]
+
+    for col in i_cols:
+        for agg_type in ["mean", "std"]:
+            new_col_name = col + "_TransactionAmt_" + agg_type
+            temp_df = pd.concat(
+                [
+                    ds.X_train[[col, "TransactionAmt"]],
+                    ds.X_test[[col, "TransactionAmt"]],
+                ]
+            )
+            temp_df = (
+                temp_df.groupby([col])["TransactionAmt"]
+                .agg([agg_type])
+                .reset_index()
+                .rename(columns={agg_type: new_col_name})
+            )
+
+            temp_df.index = list(temp_df[col])
+            temp_df = temp_df[new_col_name].to_dict()
+
+            ds.X_train[new_col_name] = ds.X_train[col].map(temp_df)
+            ds.X_test[new_col_name] = ds.X_test[col].map(temp_df)
 
 
 def build_interaction_features(ds):
@@ -496,153 +509,10 @@ def build_interaction_features(ds):
         )
         ds.X_test[feature] = ds.X_test[f1].astype(str) + "_" + ds.X_test[f2].astype(str)
 
+    ds.add_categorical_cols(random_intersection + my_intersections)
+
     logger.info("Following columns were created for interaction")
     logger.info(", ".join(random_intersection + my_intersections))
-
-
-def one_hot_encoding(ds):
-    # https://markhneedham.com/blog/2017/07/05/pandasscikit-learn-get_dummies-testtrain-sets-valueerror-shapes-not-aligned/
-    i_cols = []
-    unknown = "?"
-
-    for col in i_cols:
-        all_categories = (
-            pd.concat((ds.X_train[col], ds.X_test[col])).fillna(unknown).unique()
-        )
-        ds.X_train[col] = (
-            ds.X_train[col]
-            .fillna(unknown)
-            .astype("category", categories=all_categories)
-        )
-        ds.X_test[col] = (
-            ds.X_test[col].fillna(unknown).astype("category", categories=all_categories)
-        )
-
-    ds.X_train = pd.concat([ds.X_train, pd.get_dummies(ds.X_train[i_cols])], axis=1)
-    ds.X_test = pd.concat([ds.X_test, pd.get_dummies(ds.X_test[i_cols])], axis=1)
-
-    ds.X_train.drop(i_cols, axis=1, inplace=True)
-    ds.X_test.drop(i_cols, axis=1, inplace=True)
-
-    logger.info("Following columns were one hot encoded then dropped")
-    logger.info(", ".join(i_cols))
-
-
-def count_encoding(ds):
-    """
-    https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
-    """
-    count_together = ["card1", "card2", "card3", "card4", "card5", "card6", "id_36"]
-    count_separately = ["id_01", "id_31", "id_33", "id_36"]
-    for feature in count_together:
-        ds.X_train[feature + "_count_full"] = ds.X_train[feature].map(
-            pd.concat(
-                [ds.X_train[feature], ds.X_test[feature]], ignore_index=True
-            ).value_counts(dropna=False)
-        )
-        ds.X_test[feature + "_count_full"] = ds.X_test[feature].map(
-            pd.concat(
-                [ds.X_train[feature], ds.X_test[feature]], ignore_index=True
-            ).value_counts(dropna=False)
-        )
-
-    # Encoding - count encoding separately for ds.X_train and ds.X_test
-    for feature in count_separately:
-        ds.X_train[feature + "_count_dist"] = ds.X_train[feature].map(
-            ds.X_train[feature].value_counts(dropna=False)
-        )
-        ds.X_test[feature + "_count_dist"] = ds.X_test[feature].map(
-            ds.X_test[feature].value_counts(dropna=False)
-        )
-
-    logger.info("Following columns were count encoded, train/test together")
-    logger.info(", ".join(count_together))
-    logger.info("Following columns were count encoded, train/test separately")
-    logger.info(", ".join(count_separately))
-
-
-def frequency_encoding(ds):
-    # https://www.kaggle.com/kyakovlev/ieee-ground-baseline
-    i_cols = [
-        "card1",
-        "card2",
-        "card3",
-        "card5",
-        "C1",
-        "C2",
-        "C3",
-        "C4",
-        "C5",
-        "C6",
-        "C7",
-        "C8",
-        "C9",
-        "C10",
-        "C11",
-        "C12",
-        "C13",
-        "C14",
-        "D1",
-        "D2",
-        "D3",
-        "D4",
-        "D5",
-        "D6",
-        "D7",
-        "D8",
-        "addr1",
-        "addr2",
-        "dist1",
-        "dist2",
-        "P_emaildomain",
-        "R_emaildomain",
-        "DeviceInfo",
-        "DeviceInfo_device",
-        "DeviceInfo_version",
-        "id_30",
-        "id_30_device",
-        "id_30_version",
-        "id_31_device",
-        "id_33",
-        "uid",
-        "uid2",
-        "uid3",
-    ]
-
-    for col in i_cols:
-        temp_df = pd.concat([ds.X_train[[col]], ds.X_test[[col]]])
-        fq_encode = temp_df[col].value_counts().to_dict()
-        ds.X_train[col + "_fq_enc"] = ds.X_train[col].map(fq_encode)
-        ds.X_test[col + "_fq_enc"] = ds.X_test[col].map(fq_encode)
-
-    for col in ["DT_M", "DT_W", "DT_D"]:
-        temp_df = pd.concat([ds.X_train[[col]], ds.X_test[[col]]])
-        fq_encode = temp_df[col].value_counts().to_dict()
-        ds.X_train[col + "_total"] = ds.X_train[col].map(fq_encode)
-        ds.X_test[col + "_total"] = ds.X_test[col].map(fq_encode)
-
-    for period in ["DT_M", "DT_W", "DT_D"]:
-        for col in ["uid"]:
-            new_column = col + "_" + period
-
-            temp_df = pd.concat([ds.X_train[[col, period]], ds.X_test[[col, period]]])
-            temp_df[new_column] = (
-                temp_df[col].astype(str) + "_" + (temp_df[period]).astype(str)
-            )
-            fq_encode = temp_df[new_column].value_counts().to_dict()
-
-            ds.X_train[new_column] = (
-                ds.X_train[col].astype(str) + "_" + ds.X_train[period].astype(str)
-            ).map(fq_encode)
-            ds.X_test[new_column] = (
-                ds.X_test[col].astype(str) + "_" + ds.X_test[period].astype(str)
-            ).map(fq_encode)
-
-            ds.X_train[new_column] /= ds.X_train[period + "_total"]
-            ds.X_test[new_column] /= ds.X_test[period + "_total"]
-
-    logger.info("Following columns were frequency encoded")
-    logger.info(", ".join(i_cols))
 
 
 def label_encoding(ds):
@@ -674,176 +544,39 @@ def label_encoding(ds):
     logger.info(", ".join(converted_cols))
 
 
-def remove_numerous_categories(ds):
-    """
-    Remove cols with too much values from categorical
-    """
-    remove_cat_col = []
-    for col in ds.categorical_cols:
-        num_unique_values = ds.X_train[col].append(ds.X_test[col]).nunique()
-        num_total_values = ds.X_train[col].shape[0] + ds.X_test[col].shape[0]
-
-        # if num_unique_values / num_total_values > 0.5:
-        # should do some binning I think
-        # remove_cat_col.append(col)
-
-    ds.remove_categorical_cols(remove_cat_col)
-
-    logger.info("Following columns were dropped from category")
-    logger.info(", ".join(remove_cat_col))
-
-
-def drop_user_generated_cols(ds):
-    rm_cols = [
-        "uid",
-        "uid2",
-        "uid3",  # Our new client uID -> very noisy data
-        "DT",
-        "DT_M",
-        "DT_W",
-        "DT_D",  # Temporary Variables
-        "DT_hour",
-        "DT_day_week",
-        "DT_day",
-        "DT_D_total",
-        "DT_W_total",
-        "DT_M_total",
-    ]
-    for df in [ds.X_train, ds.X_test]:
-        df.drop(rm_cols, axis=1, inplace=True)
-
-    ds.remove_categorical_cols(rm_cols)
-
-    logger.info("Temporary columns were dropped")
-    logger.info(", ".join(rm_cols))
-
-
-def drop_cols_auto(ds):
-    one_value_cols = [
-        col for col in ds.X_train.columns if ds.X_train[col].nunique() <= 1
-    ]
-    one_value_cols_test = [
-        col for col in ds.X_test.columns if ds.X_test[col].nunique() <= 1
-    ]
-
-    many_null_cols = [
-        col
-        for col in ds.X_train.columns
-        if ds.X_train[col].isnull().sum() / ds.X_train.shape[0] > 0.9
-    ]
-    many_null_cols_test = [
-        col
-        for col in ds.X_test.columns
-        if ds.X_test[col].isnull().sum() / ds.X_test.shape[0] > 0.9
-    ]
-
-    big_top_value_cols = [
-        col
-        for col in ds.X_train.columns
-        if ds.X_train[col].value_counts(dropna=False, normalize=True).values[0] > 0.9
-    ]
-    big_top_value_cols_test = [
-        col
-        for col in ds.X_test.columns
-        if ds.X_test[col].value_counts(dropna=False, normalize=True).values[0] > 0.9
-    ]
-
-    # for col in ds.categorical_cols:
-    #    num_unique_values = ds.X_train[col].append(ds.X_test[col]).nunique()
-    #    num_total_values = ds.X_train[col].shape[0] + ds.X_test[col].shape[0]
-
-    #    # if num_unique_values / num_total_values > 0.5:
-    #    # should do some binning I think
-    #    # remove_cat_col.append(col)
-
-    cols_to_drop = list(
-        set(
-            many_null_cols
-            + many_null_cols_test
-            + big_top_value_cols
-            + big_top_value_cols_test
-            + one_value_cols
-            + one_value_cols_test
-        )
-    )
-
-    for df in [ds.X_train, ds.X_test]:
-        df.drop(cols_to_drop, axis=1, inplace=True)
-
-    ds.remove_categorical_cols(cols_to_drop)
-
-    logger.info("Following columns were dropped")
-    logger.info(", ".join(cols_to_drop))
-
-
-def drop_cols_manual(ds):
-    rm_cols = [
-        "TransactionDT",
-        "id_30",
-        "id_31",
-        "id_33",
-        "DeviceInfo",
-    ]  # + ds.identity_cols
-    for df in [ds.X_train, ds.X_test]:
-        df.drop(rm_cols, axis=1, inplace=True)
-
-    ds.remove_categorical_cols(rm_cols)
-
-    logger.info("Manual columns were dropped")
-    logger.info(", ".join(rm_cols))
-
-
 def build_processed_dataset(ds):
     clean_inf_nan(ds)  # 0.910084 - baseline
 
-    # --- Not useful
-    # clean_noise_cards(ds) # lowers to 0.907435 - removed for now
-    # id_31_check_latest_browser(ds) # lowers to 0.907111 - removed for now
-    # id_33_extract_screen_resolution(ds)
+    ########################### IDENTITY
 
-    # the following 3 gets us to 0.90979, I'd keep them to lower dimensions
-    clean_id_31(ds)
-    parse_id_30(ds)
-    parse_device_info(ds)
+    # --- Frankly except maybe for aggregating, those columns don't add a lot of value
 
-    # build_uid(ds)
-    # build_date_features(ds)
-    # transform_amount(ds)
-    # transform_productCD(ds)
-    # transform_emails_and_domains(ds)
-    # encode_M_variables(ds)
+    clean_noise_cards(ds)  # from 0.917186 to 0.918363
+    id_31_check_latest_browser(ds)  # from 0.910084 to 0.907111
+    id_33_extract_screen_resolution(ds)  # from 0.9175 to 0.913483
 
-    # build_interaction_features(ds)
+    # the following 3 gets us from 0.917509 to 0.917186
+    clean_id_31(ds)  #  from 0.917509 to 0.914228
+    parse_id_30(ds)  #  from 0.917509 to 0.914228
+    parse_device_info(ds)  #  from 0.917509 to 0.915502
 
-    # count_encoding(ds)
-    # frequency_encoding(ds)
+    # We get to 0.9182 with all activated
 
-    # drop_user_generated_cols(ds)
-    # drop_cols_auto(ds)
-    drop_cols_manual(ds)
+    ########################### TRANSACTIONS
+
+    transform_amount(ds)  # down from 0.9182 to 0.9167
+    transform_productCD(ds)
+    transform_emails_and_domains(ds)
+    encode_M_variables(ds)
+
+    ########################### AGGREGATING
+
+    build_uid(ds)
+    build_date_features(ds)
+
+    aggregate(ds)
+    build_interaction_features(ds)
+
+    ########################### ENCODING
 
     label_encoding(ds)
-
-
-def impute_mean(X_train, y_train, X_valid, y_valid, X_test):
-    imp = SimpleImputer(missing_values=np.nan, strategy="mean").fit(X_train)
-    X_train = imp.transform(X_train)
-    X_valid = imp.transform(X_valid)
-    X_test = imp.transform(X_test)
-    return X_train, y_train, X_valid, y_valid, X_test
-
-
-def process_fold(X_train, y_train, X_valid, y_valid, X_test):
-    # PCA reduction of V columns - helps when other columns are not converted to category
-    vt = VestaTransformer()
-    vt.fit(X_train)
-    X_train = vt.transform(X_train)
-    X_valid = vt.transform(X_valid)
-    X_test = vt.transform(X_test)
-
-    # X_train, y_train, X_valid, y_valid, X_test = impute_mean(
-    #    X_train, y_train, X_valid, y_valid, X_test
-    # )
-
-    logger.info("Fold was preprocessed correctly")
-    return X_train, y_train, X_valid, y_valid, X_test

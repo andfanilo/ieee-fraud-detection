@@ -2,6 +2,8 @@ import matplotlib.pylab as pl
 import numpy as np
 import pandas as pd
 import shap
+from sklearn import metrics
+from tqdm import tqdm_notebook as tqdm
 from yellowbrick.classifier import (
     ROCAUC,
     ClassificationReport,
@@ -87,7 +89,7 @@ class TreeVisualizer:
         return shap.summary_plot(self.shap_interaction_values, self.X)
 
     def dependence_plot(self, feature):
-        return shap.dependence_plot(feature, self.shap_values, self.X)
+        return shap.dependence_plot(feature, self.shap_values[1], self.X)
 
     def interaction_dependence_plot(self, feature):
         """
@@ -131,3 +133,19 @@ def plot_pr(model, X_train, y_train, X_valid, y_valid):
     visualizer.fit(X_train, y_train)
     visualizer.score(X_valid, y_valid)
     visualizer.poof()
+
+
+def permutation_importance_lgb(X, y, model):
+    """Instead of using eli5, small utility permutation function on LGB/XGB/CatBoost
+    from https://www.kaggle.com/c/ieee-fraud-detection/discussion/107877
+    """
+    perm = {}
+    y_true = model.predict(X)
+    baseline = metrics.roc_auc_score(y, y_true)
+    for cols in tqdm(X.columns):
+        value = X[cols].copy()
+        X[cols] = np.random.permutation(X[cols].values)
+        y_true = model.predict(X)
+        perm[cols] = metrics.roc_auc_score(y, y_true) - baseline
+        X[cols] = value
+    return perm

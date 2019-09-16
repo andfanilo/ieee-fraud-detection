@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.express as px
 import seaborn as sns
 from src.visualization.utils import (
+    cross_count,
     heatmap,
     rand_jitter,
     value_counts,
@@ -237,12 +238,7 @@ def grid_countplot(X, qualitative_cols, keep_n_levels=4):
 
 
 def grouped_countplot_fraud(X, col):
-    stacked = (
-        pd.crosstab(X[col], X["isFraud"])
-        .stack()
-        .reset_index()
-        .rename(columns={0: "value"})
-    )
+    stacked = cross_count(X, col, "isFraud")
     sns.barplot(x=col, y="value", hue="isFraud", data=stacked)
 
 

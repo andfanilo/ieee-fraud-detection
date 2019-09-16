@@ -16,6 +16,15 @@ from src.utils import get_root_dir, print_colored_green
 logger = logging.getLogger(__name__)
 
 
+class Fold:
+    def __init__(self, X_train, y_train, X_valid, y_valid, X_test):
+        self.X_train = X_train
+        self.y_train = y_train
+        self.X_valid = X_valid
+        self.y_valid = y_valid
+        self.X_test = X_test
+
+
 def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
     model = LogisticRegression(random_state=42, solver="lbfgs")
     model.fit(X_train, y_train)
@@ -120,15 +129,15 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
             X_train, X_valid = (X.iloc[train_index], X.iloc[valid_index])
             y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
 
+        fold = Fold(X_train, y_train, X_valid, y_valid, X_test)
+
         # fold preprocessing
         if preprocess_fold:
-            X_train, y_train, X_valid, y_valid, X_test = preprocess_fold(
-                X_train, y_train, X_valid, y_valid, X_test
-            )
+            preprocess_fold(fold)
 
         # train & predict validation / test set
         model, y_pred_valid, y_pred = clf(
-            X_train, y_train, X_valid, y_valid, X_test, params
+            fold.X_train, fold.y_train, fold.X_valid, fold.y_valid, fold.X_test, params
         )
 
         # Save models to return
