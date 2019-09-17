@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
+from src.features.utils import cross_count
 from src.visualization.utils import (
-    cross_count,
     heatmap,
     rand_jitter,
     value_counts,
@@ -119,6 +119,12 @@ def corrplot(df, cols, size_scale=500, marker="s"):
         size_scale=size_scale,
     )
     plt.show()
+
+
+def corr_cluster_map(df, cols):
+    kw_cbar = {"vmax": 1, "vmin": -1, "cmap": "RdYlGn"}
+    corr = df[cols].corr("spearman")
+    sns.clustermap(corr, **kw_cbar)
 
 
 def plot_jitter(x, y, **kwargs):
