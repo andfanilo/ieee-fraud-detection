@@ -18,6 +18,8 @@ def reduce_V_features(fold):
     fold.X_valid = vt.transform(fold.X_valid)
     fold.X_test = vt.transform(fold.X_test)
 
+    logger.info("Reduced V features")
+
 
 ########################### ENCODING
 
@@ -92,6 +94,8 @@ def count_encoding(fold):
             fold.X_test[feature].value_counts(dropna=False)
         )
 
+    logger.info("Count encoding done")
+
 
 def frequency_encoding(fold):
     # https://www.kaggle.com/kyakovlev/ieee-ground-baseline
@@ -129,7 +133,7 @@ def frequency_encoding(fold):
         fold.X_valid[col + "_fq_enc"] = fold.X_valid[col].map(fq_encode)
         fold.X_test[col + "_fq_enc"] = fold.X_test[col].map(fq_encode)
 
-    for col in ["DT_M", "DT_W", "DT_D"]:
+    for col in ["DT_M", "DT_W", "DT_D", "local_time_M", "local_time_W", "local_time_D"]:
         temp_df = pd.concat(
             [fold.X_train[[col]], fold.X_valid[[col]], fold.X_test[[col]]]
         )
@@ -138,8 +142,15 @@ def frequency_encoding(fold):
         fold.X_valid[col + "_total"] = fold.X_valid[col].map(fq_encode)
         fold.X_test[col + "_total"] = fold.X_test[col].map(fq_encode)
 
-    for period in ["DT_M", "DT_W", "DT_D"]:
-        for col in ["uid"]:
+    for period in [
+        "DT_M",
+        "DT_W",
+        "DT_D",
+        "local_time_M",
+        "local_time_W",
+        "local_time_D",
+    ]:
+        for col in ["uid", "uid2", "uid3", "uid4"]:
             new_column = col + "_" + period
 
             temp_df = pd.concat(
@@ -182,6 +193,10 @@ def drop_user_generated_cols(fold):
         "DT_M",
         "DT_W",
         "DT_D",
+        "local_time",
+        "local_time_M",
+        "local_time_W",
+        "local_time_D",
         # "DT_M_total",
         # "DT_W_total",
         # "DT_D_total",  # Temporary Variables
@@ -245,11 +260,15 @@ def drop_cols_auto(fold):
         )
     )
 
-    for df in [fold.X_train, fold.X_valid, fold.X_test]:
-        df.drop(cols_to_drop, axis=1, inplace=True)
+    # for df in [fold.X_train, fold.X_valid, fold.X_test]:
+    #    df.drop(cols_to_drop, axis=1, inplace=True)
 
-    logger.info("Following columns were dropped")
-    logger.info(", ".join(cols_to_drop))
+    logger.info("Following columns would be dropped because many nulls")
+    logger.info(", ".join(list(set(many_null_cols + many_null_cols_test))))
+    logger.info("Following columns would be dropped because big top values")
+    logger.info(", ".join(list(set(big_top_value_cols + big_top_value_cols_test))))
+    logger.info("Following columns would be dropped because one value cols")
+    logger.info(", ".join(list(set(one_value_cols + one_value_cols_test))))
 
 
 def drop_cols_manual(fold):

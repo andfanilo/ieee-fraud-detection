@@ -61,6 +61,7 @@ def run_experiment(version, key):
     conf = read_configuration(key)
     classifier = conf["classifier"]
     params = conf["params"]
+    split = conf["splits"]
 
     logger.info("Begin run experiment")
 
@@ -73,7 +74,11 @@ def run_experiment(version, key):
         # [["2018-01-01", "2018-05-31"], ["2017-12-01", "2017-12-31"]],
         [["2017-12-01", "2018-04-15"], ["2018-05-01", "2018-05-31"]]
     ]
-    folds = CustomDateSplitter(ds.X_train["TransactionDT"], date_ranges)
+    splits = {
+        "holdout": CustomDateSplitter(ds.X_train["TransactionDT"], date_ranges),
+        "kfold": KFold(n_splits=6, shuffle=False),
+    }
+    folds = splits[split]
 
     logger.info("Preprocessing data")
     build_processed_dataset(ds)

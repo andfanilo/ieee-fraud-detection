@@ -27,6 +27,7 @@ def _validate_configuration(params):
         "params": {"type": "dict"},
         "save_models": {"type": "boolean"},
         "save_predictions": {"type": "boolean"},
+        "splits": {"type": "string"},
     }
     v = Validator(schema)
     if not v.validate(params):

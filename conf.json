@@ -3,13 +3,15 @@
     "classifier": "logistic",
     "params": {},
     "save_models": false,
-    "save_predictions": false
+    "save_predictions": false,
+    "splits": "holdout"
   },
   "logistic": {
     "classifier": "logistic",
     "params": {},
     "save_models": true,
-    "save_predictions": true
+    "save_predictions": true,
+    "splits": "holdout"
   },
   "xgb_test": {
     "classifier": "xgb",
@@ -29,14 +31,15 @@
       "nthread": 1
     },
     "save_models": false,
-    "save_predictions": false
+    "save_predictions": false,
+    "splits": "holdout"
   },
   "xgb": {
     "classifier": "xgb",
     "params": {
       "n_estimators": 50000,
       "early_stopping_rounds": 200,
-      "eta": 0.05,
+      "eta": 0.03,
       "max_depth": 9,
       "objective": "binary:logistic",
       "eval_metric": "auc",
@@ -49,7 +52,29 @@
       "nthread": -1
     },
     "save_models": true,
-    "save_predictions": true
+    "save_predictions": true,
+    "splits": "holdout"
+  },
+  "xgb_kfold": {
+    "classifier": "xgb",
+    "params": {
+      "n_estimators": 50000,
+      "early_stopping_rounds": 200,
+      "eta": 0.03,
+      "max_depth": 9,
+      "objective": "binary:logistic",
+      "eval_metric": "auc",
+      "gamma": 0.1,
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "scale_pos_weight": 10,
+      "verbosity": 0,
+      "random_state": 1337,
+      "nthread": -1
+    },
+    "save_models": true,
+    "save_predictions": true,
+    "splits": "kfold"
   },
   "lgb_test": {
     "classifier": "lgb",
@@ -70,7 +95,8 @@
       "verbosity": -1
     },
     "save_models": false,
-    "save_predictions": false
+    "save_predictions": false,
+    "splits": "holdout"
   },
   "lgb": {
     "classifier": "lgb",
@@ -96,7 +122,35 @@
       "verbosity": -1
     },
     "save_models": true,
-    "save_predictions": true
+    "save_predictions": true,
+    "splits": "holdout"
+  },
+  "lgb_kfold": {
+    "classifier": "lgb",
+    "params": {
+      "n_estimators": 50000,
+      "early_stopping_rounds": 100,
+      "num_leaves": 256,
+      "learning_rate": 0.01,
+      "max_depth": -1,
+      "objective": "binary",
+      "metric": "auc",
+      "subsample": 0.85,
+      "subsample_freq": 1,
+      "colsample_bytree": 0.85,
+      "scale_pos_weight": 5.5,
+      "boosting_type": "gbdt",
+      "tree_learner": "serial",
+      "max_bin": 255,
+      "reg_alpha": 0.3,
+      "reg_lambda": 0.243,
+      "seed": 1337,
+      "n_jobs": -1,
+      "verbosity": -1
+    },
+    "save_models": true,
+    "save_predictions": true,
+    "splits": "kfold"
   },
   "cat_test": {
     "classifier": "catboost",
@@ -111,14 +165,15 @@
       "use_best_model": true
     },
     "save_models": false,
-    "save_predictions": false
+    "save_predictions": false,
+    "splits": "holdout"
   },
   "cat": {
     "classifier": "catboost",
     "params": {
       "iterations": 50000,
       "early_stopping_rounds": 200,
-      "learning_rate": 0.05,
+      "learning_rate": 0.03,
       "depth": 13,
       "eval_metric": "AUC",
       "loss_function": "Logloss",
@@ -126,6 +181,23 @@
       "use_best_model": true
     },
     "save_models": true,
-    "save_predictions": true
+    "save_predictions": true,
+    "splits": "holdout"
+  },
+  "cat_kfold": {
+    "classifier": "catboost",
+    "params": {
+      "iterations": 50000,
+      "early_stopping_rounds": 200,
+      "learning_rate": 0.01,
+      "depth": 13,
+      "eval_metric": "AUC",
+      "loss_function": "Logloss",
+      "random_seed": 1337,
+      "use_best_model": true
+    },
+    "save_models": true,
+    "save_predictions": true,
+    "splits": "kfold"
   }
 }

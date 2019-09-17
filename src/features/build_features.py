@@ -17,23 +17,29 @@ def clean_inf_nan(ds):
     logger.info("Infinites were cleaned")
 
 
-def clean_noise_cards(ds, valid_counts=2):
+def clean_noise_cards(ds):
     # https://www.kaggle.com/kyakovlev/ieee-ground-baseline
     # Reset values for "noise" card1 (account sampling)
-    valid_card = ds.X_train["card1"].value_counts()
-    valid_card = valid_card[valid_card > valid_counts]
-    valid_card = list(valid_card.index)
+    noise_card1 = list(
+        ds.X_train["card1"].value_counts()[ds.X_train["card1"].value_counts() < 2].index
+    )
+    noise_card3 = list(
+        ds.X_train["card3"]
+        .value_counts()[ds.X_train["card3"].value_counts() < 200]
+        .index
+    )
+    noise_card5 = list(
+        ds.X_train["card5"]
+        .value_counts()[ds.X_train["card5"].value_counts() < 300]
+        .index
+    )
 
-    ds.X_train["card1"] = np.where(
-        ds.X_train["card1"].isin(valid_card), ds.X_train["card1"], np.nan
-    )
-    ds.X_test["card1"] = np.where(
-        ds.X_test["card1"].isin(valid_card), ds.X_test["card1"], np.nan
-    )
+    for df in [ds.X_train, ds.X_test]:
+        df.loc[df["card1"].isin(noise_card1), "card1"] = "Others"
+        df.loc[df["card3"].isin(noise_card3), "card3"] = "Others"
+        df.loc[df["card5"].isin(noise_card5), "card5"] = "Others"
 
-    logger.info(
-        f"Noise card1 (less than {valid_counts} counts in training) were dropped"
-    )
+    logger.info(f"Noise cards were dropped")
 
 
 def id_31_check_latest_browser(ds):
@@ -395,18 +401,16 @@ def encode_M_variables(ds):
     i_cols = ["M1", "M2", "M3", "M5", "M6", "M7", "M8", "M9"]
 
     for df in [ds.X_train, ds.X_test]:
-        df["M_sum"] = df[i_cols].sum(axis=1).astype(np.int8)
-        df["M_na"] = df[i_cols].isna().sum(axis=1).astype(np.int8)
+        df["M_sum"] = df[[f"M{i}" for i in range(1, 10)]].sum(axis=1).astype(np.int8)
+        df["M_na"] = (
+            df[[f"M{i}" for i in range(1, 10)]].isna().sum(axis=1).astype(np.int8)
+        )
+
         for col in i_cols:
             df[col] = df[col].map({"T": 1, "F": 0})
-
-    logger.info("Following columns were binary encoded")
-    logger.info(", ".join(i_cols))
-
-    for df in [ds.X_train, ds.X_test]:
         df["M4"] = df["M4"].map({"M0": 1, "M1": 2, "M2": 3})
 
-    logger.info("M4 was label encoded")
+    logger.info("M columns were encoded")
 
 
 def build_uid(ds):
@@ -447,6 +451,89 @@ def build_date_features(ds, start_date="2017-11-30"):
         df["DT_day_week"] = df["DT"].dt.dayofweek
         df["DT_day"] = df["DT"].dt.day
 
+        df["DT_weekday"] = np.where((df["DT_day_week"].isin([0, 1, 2, 3, 4])), 1, 0)
+        df["DT_weekend"] = np.where((df["DT_day_week"].isin([5, 6])), 1, 0)
+
+        df["DT_night"] = np.where((df["DT_hour"].isin(range(3, 10))), 1, 0)
+        df["DT_morning"] = np.where((df["DT_hour"].isin(range(10, 15))), 1, 0)
+        df["DT_afternoon"] = np.where((df["DT_hour"].isin(range(15, 22))), 1, 0)
+        df["DT_evening"] = np.where((df["DT_hour"].isin([22, 23, 0, 1, 2])), 1, 0)
+
+        # build circular time - https://ianlondon.github.io/blog/encoding-cyclical-features-24hour-time/
+        seconds_in_day = 24 * 60 * 60
+        c = (
+            2
+            * np.pi
+            * (
+                df["DT"].dt.hour * 60 * 24
+                + df["DT"].dt.minute * 60
+                + df["DT"].dt.second
+            )
+            / seconds_in_day
+        )
+        df["sinus_hour"] = np.sin(c)
+        df["cos_hour"] = np.cos(c)
+
+        df["local_time"] = df["DT"] + df["id_14"].fillna(0.0).apply(
+            lambda x: pd.DateOffset(minutes=x)
+        )
+
+        df["local_time_M"] = df["local_time"].dt.month
+        df["local_time_W"] = df["local_time"].dt.weekofyear
+        df["local_time_D"] = df["local_time"].dt.dayofyear
+
+        df["local_time_hour"] = df["local_time"].dt.hour
+        df["local_time_day_week"] = df["local_time"].dt.dayofweek
+        df["local_time_day"] = df["local_time"].dt.day
+
+        df["local_time_weekday"] = np.where(
+            (df["local_time_day_week"].isin([0, 1, 2, 3, 4])), 1, 0
+        )
+        df["local_time_weekend"] = np.where(
+            (df["local_time_day_week"].isin([5, 6])), 1, 0
+        )
+
+        df["local_time_night"] = np.where(
+            (df["local_time_hour"].isin(range(3, 10))), 1, 0
+        )
+        df["local_time_morning"] = np.where(
+            (df["local_time_hour"].isin(range(10, 15))), 1, 0
+        )
+        df["local_time_afternoon"] = np.where(
+            (df["local_time_hour"].isin(range(15, 22))), 1, 0
+        )
+        df["local_time_evening"] = np.where(
+            (df["local_time_hour"].isin([22, 23, 0, 1, 2])), 1, 0
+        )
+        df.loc[
+            df["id_14"].isna(),
+            [
+                "local_time",
+                "local_time_M",
+                "local_time_W",
+                "local_time_D",
+                "local_time_weekday",
+                "local_time_weekend",
+                "local_time_night",
+                "local_time_morning",
+                "local_time_afternoon",
+                "local_time_evening",
+            ],
+        ] = np.nan
+
+        c = (
+            2
+            * np.pi
+            * (
+                df["local_time"].dt.hour * 60 * 24
+                + df["local_time"].dt.minute * 60
+                + df["local_time"].dt.second
+            )
+            / seconds_in_day
+        )
+        df["local_time_sinus_hour"] = np.sin(c)
+        df["local_time_cos_hour"] = np.cos(c)
+
         # D9 is an hour
         df["D9"] = np.where(df["D9"].isna(), 0, 1)
 
@@ -459,29 +546,31 @@ def aggregate(ds):
     # (even if features importances are telling contrariwise)
     # There are many unique values and model doesn't generalize well
     # Lets do some aggregations
-    i_cols = ["card1", "card2", "card3", "card5", "uid", "uid2", "uid3", "uid4"]
+    agg_cols = ["TransactionAmt", "id_02", "D15"]
+    i_cols = ["card1", "card4", "uid", "uid2", "uid3", "uid4", "addr1"]
 
-    for col in i_cols:
-        for agg_type in ["mean", "std"]:
-            new_col_name = col + "_TransactionAmt_" + agg_type
-            temp_df = pd.concat(
-                [
-                    ds.X_train[[col, "TransactionAmt"]],
-                    ds.X_test[[col, "TransactionAmt"]],
-                ]
-            )
-            temp_df = (
-                temp_df.groupby([col])["TransactionAmt"]
-                .agg([agg_type])
-                .reset_index()
-                .rename(columns={agg_type: new_col_name})
-            )
+    for aggregated_col in agg_cols:
+        for col in i_cols:
+            for agg_type in ["mean", "std"]:
+                new_col_name = f"{col}_{aggregated_col}_{agg_type}"
+                temp_df = pd.concat(
+                    [
+                        ds.X_train[[col, aggregated_col]],
+                        ds.X_test[[col, aggregated_col]],
+                    ]
+                )
+                temp_df = (
+                    temp_df.groupby([col])[aggregated_col]
+                    .agg([agg_type])
+                    .reset_index()
+                    .rename(columns={agg_type: new_col_name})
+                )
 
-            temp_df.index = list(temp_df[col])
-            temp_df = temp_df[new_col_name].to_dict()
+                temp_df.index = list(temp_df[col])
+                temp_df = temp_df[new_col_name].to_dict()
 
-            ds.X_train[new_col_name] = ds.X_train[col].map(temp_df)
-            ds.X_test[new_col_name] = ds.X_test[col].map(temp_df)
+                ds.X_train[new_col_name] = ds.X_train[col].map(temp_df)
+                ds.X_test[new_col_name] = ds.X_test[col].map(temp_df)
 
 
 def build_interaction_features(ds):
