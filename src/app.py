@@ -47,8 +47,8 @@ def run_experiment(version, key):
     preprocessors_fold = {
         "logistic": process_fold,
         "lgb": process_fold,
-        "xgb": None,
-        "catboost": None,
+        "xgb": process_fold,
+        "catboost": process_fold,
     }
     modellers = {
         "logistic": clf_logistic,

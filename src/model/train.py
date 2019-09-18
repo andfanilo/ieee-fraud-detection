@@ -38,7 +38,10 @@ def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
+    n_estimators = params.pop("n_estimators")
+    early_stopping_rounds = params.pop("early_stopping_rounds")
     columns = X_train.columns
+
     train_data = xgb.DMatrix(data=X_train, label=y_train, feature_names=columns)
     valid_data = xgb.DMatrix(data=X_valid, label=y_valid, feature_names=columns)
 
@@ -49,6 +52,8 @@ def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
         evals=watchlist,
         # feval=eval_auc_xgb, # put disable_default_eval_metric:"1" in params
         verbose_eval=100,
+        num_boost_round=n_estimators,
+        early_stopping_rounds=early_stopping_rounds,
     )
     y_pred_valid = model.predict(
         xgb.DMatrix(X_valid, feature_names=columns), ntree_limit=model.best_ntree_limit
@@ -61,6 +66,9 @@ def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
+    n_estimators = params.pop("n_estimators")
+    early_stopping_rounds = params.pop("early_stopping_rounds")
+
     train_data = lgb.Dataset(data=X_train, label=y_train)
     valid_data = lgb.Dataset(data=X_valid, label=y_valid)
 
@@ -71,6 +79,8 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
         valid_names=["train", "valid"],
         # feval=eval_auc_lgb, # put metric:"None" in params
         verbose_eval=100,
+        num_boost_round=n_estimators,
+        early_stopping_rounds=early_stopping_rounds,
     )
 
     y_pred_valid = model.predict(X_valid, num_iteration=model.best_iteration)
