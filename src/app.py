@@ -77,7 +77,6 @@ def run_experiment(version, key):
     logger.info("Preprocessing data")
     build_processed_dataset(ds)
 
-    ds.save_dataset(f"{key}_processed")
     gc.collect()
 
     ########################### TRAIN MODEL
@@ -92,6 +91,7 @@ def run_experiment(version, key):
         ds.write_submission(path_to_preds)
 
     if conf["save_models"]:
+        ds.save_dataset(f"{key}_processed")
         path_to_models = get_root_dir() / f"models/{key}_{time_experiment}"
         logger.info(f"Saving raw models to {path_to_models}")
 
