@@ -638,3 +638,25 @@ class Dataset:
         df = df.set_index("TransactionID")
         df["isFraud"] = 0.5
         return df
+
+
+class Fold:
+    def __init__(self, X_train, y_train, X_valid, y_valid, X_test, categorical_cols):
+        self.X_train = X_train
+        self.y_train = y_train
+        self.X_valid = X_valid
+        self.y_valid = y_valid
+        self.X_test = X_test
+        self.categorical_cols = categorical_cols
+
+    def add_categorical_cols(self, elements):
+        """Add custom column to categorical cols
+        """
+        self.categorical_cols = self.categorical_cols + elements
+
+    def remove_categorical_cols(self, cols_to_drop):
+        """Remove custom column from categorical cols
+        """
+        self.categorical_cols = [
+            c for c in self.categorical_cols if c not in cols_to_drop
+        ]

@@ -54,7 +54,7 @@ The previous commands are installed in pre-commit hooks.
 In a `ipython` console, rebuild dataset in interim :
 
 ```py
-from src.dataset.make_dataset import Dataset
+from src.dataset.data import Dataset
 ds = Dataset()
 ds.load_raw()
 ds.save_dataset()

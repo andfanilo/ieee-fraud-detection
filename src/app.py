@@ -8,10 +8,8 @@ import click
 import numpy as np
 from sklearn.model_selection import GroupKFold, KFold, RepeatedKFold, StratifiedKFold
 from src.config import read_configuration, write_params
-from src.dataset.make_dataset import Dataset
+from src.dataset.data import Dataset
 from src.features.build_features import build_processed_dataset
-from src.features.process_fold import process_fold
-from src.features.utils import convert_category_cols_lgb
 from src.model.split import CustomDateSplitter
 from src.model.train import (
     clf_catboost,
@@ -43,13 +41,6 @@ def run_experiment(version, key):
     seed_everything(0)
 
     # Predefine functions
-    preprocessors = {"lgb": convert_category_cols_lgb}
-    preprocessors_fold = {
-        "logistic": process_fold,
-        "lgb": process_fold,
-        "xgb": process_fold,
-        "catboost": process_fold,
-    }
     modellers = {
         "logistic": clf_logistic,
         "lgb": clf_lgb,
@@ -57,7 +48,7 @@ def run_experiment(version, key):
         "catboost": clf_catboost,
     }
 
-    # Read JSON conf for parameters
+    ########################### READ PARAMETERS
     conf = read_configuration(key)
     classifier = conf["classifier"]
     params = conf["params"]
@@ -65,10 +56,12 @@ def run_experiment(version, key):
 
     logger.info("Begin run experiment")
 
+    ########################### LOADING DATASET
     logger.info("Loading dataset")
     ds = Dataset()
     ds.load_dataset(version)
 
+    ########################### BUILD CROSS VALIDATION STRATEGY
     logger.info("Build folds")
     date_ranges = [
         # [["2018-01-01", "2018-05-31"], ["2017-12-01", "2017-12-31"]],
@@ -80,19 +73,18 @@ def run_experiment(version, key):
     }
     folds = splits[split]
 
+    ########################### PREPROCESSING DATA
     logger.info("Preprocessing data")
     build_processed_dataset(ds)
-    if classifier in preprocessors:
-        preprocessors[classifier](ds)
 
     ds.save_dataset(f"{key}_processed")
     gc.collect()
 
+    ########################### TRAIN MODEL
     logger.info(f"Building {classifier} model")
-    result = run_train_predict(
-        ds, modellers[classifier], params, folds, preprocessors_fold[classifier]
-    )
+    result = run_train_predict(ds, modellers[classifier], params, folds)
 
+    ########################### SAVING
     if conf["save_predictions"]:
         path_to_preds = f"{key}_{time_experiment}"
         logger.info(f"Saving {key} predictions to {path_to_preds}")

@@ -11,6 +11,13 @@ logger = logging.getLogger(__name__)
 ########################### TRANSFORMING
 
 
+def impute_values(fold):
+    for col in fold.categorical_cols:
+        fold.X_train[col] = fold.X_train[col].fillna(-999)
+        fold.X_valid[col] = fold.X_valid[col].fillna(-999)
+        fold.X_test[col] = fold.X_test[col].fillna(-999)
+
+
 def reduce_V_features(fold):
     vt = VestaTransformer()
     vt.fit(fold.X_train)
@@ -188,7 +195,7 @@ def drop_user_generated_cols(fold):
         "uid",
         "uid2",
         "uid3",
-        "uid4",  # Our new client uID -> very noisy data
+        "uid4",
         "DT",
         "DT_M",
         "DT_W",
@@ -199,13 +206,15 @@ def drop_user_generated_cols(fold):
         "local_time_D",
         # "DT_M_total",
         # "DT_W_total",
-        # "DT_D_total",  # Temporary Variables
+        # "DT_D_total",
         # "DT_hour",
         # "DT_day_week",
         # "DT_day",
     ]
     for df in [fold.X_train, fold.X_valid, fold.X_test]:
         df.drop(rm_cols, axis=1, inplace=True)
+
+    fold.remove_categorical_cols(rm_cols)
 
     logger.info("Temporary columns were dropped")
     logger.info(", ".join(rm_cols))
@@ -263,6 +272,8 @@ def drop_cols_auto(fold):
     # for df in [fold.X_train, fold.X_valid, fold.X_test]:
     #    df.drop(cols_to_drop, axis=1, inplace=True)
 
+    # fold.remove_categorical_cols(cols_to_drop)
+
     logger.info("Following columns would be dropped because many nulls")
     logger.info(", ".join(list(set(many_null_cols + many_null_cols_test))))
     logger.info("Following columns would be dropped because big top values")
@@ -276,12 +287,15 @@ def drop_cols_manual(fold):
     for df in [fold.X_train, fold.X_valid, fold.X_test]:
         df.drop(rm_cols, axis=1, inplace=True)
 
+    fold.remove_categorical_cols(rm_cols)
+
     logger.info("Manual columns were dropped")
     logger.info(", ".join(rm_cols))
 
 
 def process_fold(fold):
-    ########################### REDUCING
+    ########################### TRANSFORMING
+    impute_values(fold)
     reduce_V_features(fold)
 
     ########################### ENCODING

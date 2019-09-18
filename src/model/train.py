@@ -9,20 +9,13 @@ import xgboost as xgb
 from catboost import CatBoostClassifier
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
+from src.dataset.data import Fold
+from src.features.process_fold import process_fold
 from src.model.split import TimeSeriesSplit
 from src.model.utils import eval_auc_lgb, eval_auc_xgb
 from src.utils import get_root_dir, print_colored_green
 
 logger = logging.getLogger(__name__)
-
-
-class Fold:
-    def __init__(self, X_train, y_train, X_valid, y_valid, X_test):
-        self.X_train = X_train
-        self.y_train = y_train
-        self.X_valid = X_valid
-        self.y_valid = y_valid
-        self.X_test = X_test
 
 
 def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
@@ -40,8 +33,9 @@ def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
 def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
     n_estimators = params.pop("n_estimators")
     early_stopping_rounds = params.pop("early_stopping_rounds")
-    columns = X_train.columns
+    params.pop("categorical_feature")
 
+    columns = X_train.columns
     train_data = xgb.DMatrix(data=X_train, label=y_train, feature_names=columns)
     valid_data = xgb.DMatrix(data=X_valid, label=y_valid, feature_names=columns)
 
@@ -69,6 +63,10 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
     n_estimators = params.pop("n_estimators")
     early_stopping_rounds = params.pop("early_stopping_rounds")
 
+    categorical_feature = params.pop("categorical_feature")
+    logger.info("Following columns considered categorical for training")
+    logger.info(", ".join(categorical_feature))
+
     train_data = lgb.Dataset(data=X_train, label=y_train)
     valid_data = lgb.Dataset(data=X_valid, label=y_valid)
 
@@ -78,6 +76,7 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
         valid_sets=[train_data, valid_data],
         valid_names=["train", "valid"],
         # feval=eval_auc_lgb, # put metric:"None" in params
+        categorical_feature=categorical_feature,
         verbose_eval=100,
         num_boost_round=n_estimators,
         early_stopping_rounds=early_stopping_rounds,
@@ -89,9 +88,17 @@ def clf_lgb(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def clf_catboost(X_train, y_train, X_valid, y_valid, X_test, params):
+    categorical_feature = params.pop("categorical_feature")
+    logger.info("Following columns considered categorical for training")
+    logger.info(", ".join(categorical_feature))
+
     model = CatBoostClassifier(**params)
     model.fit(
-        X_train, y_train, eval_set=(X_valid, y_valid), cat_features=[], verbose=100
+        X_train,
+        y_train,
+        eval_set=(X_valid, y_valid),
+        cat_features=categorical_feature,
+        verbose=100,
     )
 
     y_pred_valid = model.predict_proba(X_valid)[:, 1]
@@ -106,6 +113,7 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
     X = ds.X_train
     X_test = ds.X_test
     y = ds.y_train
+
     category_cols = ds.categorical_cols
     n_splits = folds.get_n_splits()
 
@@ -139,11 +147,14 @@ def run_train_predict(ds, clf, params, folds, preprocess_fold=None, averaging="u
             X_train, X_valid = (X.iloc[train_index], X.iloc[valid_index])
             y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
 
-        fold = Fold(X_train, y_train, X_valid, y_valid, X_test)
+        fold = Fold(X_train, y_train, X_valid, y_valid, X_test, category_cols)
 
         # fold preprocessing
-        if preprocess_fold:
-            preprocess_fold(fold)
+        process_fold(fold)
+
+        # automatically extract categorical features for catboost, or chosoe for lgb
+        if "categorical_feature" not in params:
+            params["categorical_feature"] = fold.categorical_cols
 
         # train & predict validation / test set
         model, y_pred_valid, y_pred = clf(
