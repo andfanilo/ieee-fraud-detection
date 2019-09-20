@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
+from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
 from src.features.utils import num_after_point
 
 logger = logging.getLogger(__name__)
@@ -244,6 +244,9 @@ def transform_amount(ds):
     https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-w-gpu
     """
     for df in [ds.X_train, ds.X_test]:
+        # Clip values
+        df["TransactionAmt"] = df["TransactionAmt"].clip(0, 5000)
+
         # decimal part of the transaction amount.
         df["TransactionAmt_main"] = np.floor(df["TransactionAmt"])
         df["TransactionAmt_cents"] = df["TransactionAmt"] - np.floor(
@@ -274,16 +277,22 @@ def transform_amount(ds):
         # log of transaction amount.
         df["TransactionAmt_Log"] = np.log1p(df["TransactionAmt"])
 
+        df["product_type"] = (
+            df["ProductCD"].astype(str) + "_" + df["TransactionAmt"].astype(str)
+        )
+
     # Check if the Transaction Amount is common or not (we can use freq encoding here)
     # In our dialog with a model we are telling to trust or not to these values
-    # ds.X_train["TransactionAmt_check"] = np.where(
-    #    ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
-    # )
-    # ds.X_test["TransactionAmt_check"] = np.where(
-    #    ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
-    # )
+    ds.X_train["TransactionAmt_check"] = np.where(
+        ds.X_train["TransactionAmt"].isin(ds.X_test["TransactionAmt"]), 1, 0
+    )
+    ds.X_test["TransactionAmt_check"] = np.where(
+        ds.X_test["TransactionAmt"].isin(ds.X_train["TransactionAmt"]), 1, 0
+    )
 
-    logger.info("TransactionAmt was worked heavily")
+    ds.add_categorical_cols(["product_type"])
+
+    logger.info("TransactionAmt was worked heavily, new product_type")
 
 
 def transform_productCD(ds):
@@ -413,6 +422,55 @@ def encode_M_variables(ds):
     logger.info("M columns were encoded")
 
 
+def clean_D_variables(ds):
+    i_cols = ["D" + str(i) for i in range(1, 16)]
+    uids = ["uid", "uid2", "uid3", "uid4", "uid5", "bank_type"]
+    aggregations = ["mean", "std"]
+
+    for df in [ds.X_train, ds.X_test]:
+        for col in i_cols:
+            df[col] = df[col].clip(0)
+
+            # Lets transform D8 and D9 column
+            # As we almost sure it has connection with hours
+            df["D9_not_na"] = np.where(df["D9"].isna(), 0, 1)
+            df["D8_not_same_day"] = np.where(df["D8"] >= 1, 1, 0)
+            df["D8_D9_decimal_dist"] = df["D8"].fillna(0) - df["D8"].fillna(0).astype(
+                int
+            )
+            df["D8_D9_decimal_dist"] = (
+                (df["D8_D9_decimal_dist"] - df["D9"]) ** 2
+            ) ** 0.5
+            df["D8"] = df["D8"].fillna(-1).astype(int)
+
+    i_cols.remove("D1")
+    i_cols.remove("D2")
+    i_cols.remove("D9")
+    periods = ["DT_D", "DT_W", "DT_M"]
+
+    # for df in [ds.X_train, ds.X_test]:
+    #    df = values_normalization(df, periods, i_cols)
+
+    for col in ["D1", "D2"]:
+        for df in [ds.X_train, ds.X_test]:
+            df[col + "_scaled"] = df[col] / ds.X_train[col].max()
+
+    logger.info("Clean D variables")
+
+
+def clean_C_variables(ds):
+    i_cols = ["C" + str(i) for i in range(1, 15)]
+
+    for df in [ds.X_train, ds.X_test]:
+        for col in i_cols:
+            max_value = ds.X_train[ds.X_train["DT_M"] == ds.X_train["DT_M"].max()][
+                col
+            ].max()
+            df[col] = df[col].clip(None, max_value)
+
+    logger.info("Clean C variables")
+
+
 def build_uid(ds):
     # Let's add some kind of client uID based on cardID and addr columns
     # The value will be very specific for each client so we need to remove it
@@ -426,10 +484,17 @@ def build_uid(ds):
             + "_"
             + df["card5"].astype(str)
         )
-        df["uid3"] = df["uid2"].astype(str) + "_" + df["addr1"].astype(str)
+        df["uid3"] = (
+            df["uid2"].astype(str)
+            + "_"
+            + df["addr1"].astype(str)
+            + df["addr2"].astype(str)
+        )
         df["uid4"] = df["uid3"].astype(str) + "_" + df["P_emaildomain"].astype(str)
+        df["uid5"] = df["uid3"].astype(str) + "_" + df["R_emaildomain"].astype(str)
+        df["bank_type"] = df["card3"].astype(str) + "_" + df["card5"].astype(str)
 
-    logger.info("UUIDs were built")
+    logger.info("UUIDs and bank_type were built")
 
 
 def build_date_features(ds, start_date="2017-11-30"):
@@ -449,7 +514,7 @@ def build_date_features(ds, start_date="2017-11-30"):
 
         df["DT_hour"] = df["DT"].dt.hour
         df["DT_day_week"] = df["DT"].dt.dayofweek
-        df["DT_day"] = df["DT"].dt.day
+        df["DT_day_month"] = df["DT"].dt.day
 
         df["DT_weekday"] = np.where((df["DT_day_week"].isin([0, 1, 2, 3, 4])), 1, 0)
         df["DT_weekend"] = np.where((df["DT_day_week"].isin([5, 6])), 1, 0)
@@ -534,25 +599,49 @@ def build_date_features(ds, start_date="2017-11-30"):
         df["local_time_sinus_hour"] = np.sin(c)
         df["local_time_cos_hour"] = np.cos(c)
 
+        # Possible solo feature
+        df["is_december"] = df["DT"].dt.month
+        df["is_december"] = (df["is_december"] == 12).astype(np.int8)
+
+        # Holidays
+        dates_range = pd.date_range(start="2017-10-01", end="2019-01-01")
+        us_holidays = calendar().holidays(
+            start=dates_range.min(), end=dates_range.max()
+        )
+        df["is_holiday"] = (
+            df["DT"].dt.date.astype("datetime64").isin(us_holidays)
+        ).astype(np.int8)
+
         # D9 is an hour
         df["D9"] = np.where(df["D9"].isna(), 0, 1)
 
     logger.info("Built date features")
 
 
-def aggregate(ds):
+def aggregate_uids(ds):
     # For our model current TransactionAmt is a noise
     # https://www.kaggle.com/kyakovlev/ieee-check-noise
     # (even if features importances are telling contrariwise)
     # There are many unique values and model doesn't generalize well
     # Lets do some aggregations
     agg_cols = ["TransactionAmt", "id_02", "D15"]
-    i_cols = ["card1", "card4", "uid", "uid2", "uid3", "uid4", "addr1"]
+    i_cols = [
+        "card1",
+        "card4",
+        "uid",
+        "uid2",
+        "uid3",
+        "uid4",
+        "uid5",
+        "bank_type",
+        "addr1",
+    ]
 
     for aggregated_col in agg_cols:
         for col in i_cols:
             for agg_type in ["mean", "std"]:
-                new_col_name = f"{col}_{aggregated_col}_{agg_type}"
+                new_col_name = f"groupby_{col}_{aggregated_col}_{agg_type}"
+
                 temp_df = pd.concat(
                     [
                         ds.X_train[[col, aggregated_col]],
@@ -571,6 +660,18 @@ def aggregate(ds):
 
                 ds.X_train[new_col_name] = ds.X_train[col].map(temp_df)
                 ds.X_test[new_col_name] = ds.X_test[col].map(temp_df)
+
+            # normalize
+            new_norm_col_name = f"groupby_{col}_{aggregated_col}_std_norm"
+            mean_col = f"groupby_{col}_{aggregated_col}_mean"
+            std_col = f"groupby_{col}_{aggregated_col}_std"
+
+            ds.X_train[new_norm_col_name] = (
+                ds.X_train[aggregated_col] - ds.X_train[mean_col]
+            ) / ds.X_train[std_col]
+            ds.X_test[new_norm_col_name] = (
+                ds.X_test[aggregated_col] - ds.X_test[mean_col]
+            ) / ds.X_test[std_col]
 
 
 def build_interaction_features(ds):
@@ -604,33 +705,60 @@ def build_interaction_features(ds):
     logger.info(", ".join(random_intersection + my_intersections))
 
 
-def label_encoding(ds):
-    """
-    Apply label encoder to ds.X_train and ds.X_test categorical columns, while preserving nan values
+def build_usage(ds):
+    encoding_mean = {
+        1: ["DT_D", "DT_hour", "_hour_dist", "DT_hour_mean"],
+        2: ["DT_W", "DT_day_week", "_week_day_dist", "DT_day_week_mean"],
+        3: ["DT_M", "DT_day_month", "_month_day_dist", "DT_day_month_mean"],
+    }
 
-    input: a Dataset
-    output: (train, test)
-    """
-    converted_cols = []
-    nan_constant = -999
+    encoding_best = {
+        1: ["DT_D", "DT_hour", "_hour_dist_best", "DT_hour_best"],
+        2: ["DT_W", "DT_day_week", "_week_day_dist_best", "DT_day_week_best"],
+        3: ["DT_M", "DT_day_month", "_month_day_dist_best", "DT_day_month_best"],
+    }
 
-    for col in ds.categorical_cols:
-        ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
-        ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
+    # Some ugly code here (even worse than in other parts)
+    for col in ["card3", "card5", "bank_type"]:
+        for df in [ds.X_train, ds.X_test]:
+            for encode in encoding_mean:
+                encode = encoding_mean[encode].copy()
+                new_col = col + "_" + encode[0] + encode[2]
+                df[new_col] = df[col].astype(str) + "_" + df[encode[0]].astype(str)
 
-        lbl = LabelEncoder()
-        lbl.fit(list(ds.X_train[col].values) + list(ds.X_test[col].values))
-        ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
-        ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
+                temp_dict = (
+                    df.groupby([new_col])[encode[1]]
+                    .agg(["mean"])
+                    .reset_index()
+                    .rename(columns={"mean": encode[3]})
+                )
+                temp_dict.index = temp_dict[new_col].values
+                temp_dict = temp_dict[encode[3]].to_dict()
+                df[new_col] = df[encode[1]] - df[new_col].map(temp_dict)
 
-        if nan_constant in lbl.classes_:
-            nan_transformed = lbl.transform([nan_constant])[0]
-            ds.X_train.loc[ds.X_train[col] == nan_transformed, col] = np.nan
-            ds.X_test.loc[ds.X_test[col] == nan_transformed, col] = np.nan
-        converted_cols.append(col)
+            for encode in encoding_best:
+                encode = encoding_best[encode].copy()
+                new_col = col + "_" + encode[0] + encode[2]
+                df[new_col] = df[col].astype(str) + "_" + df[encode[0]].astype(str)
+                temp_dict = (
+                    df.groupby([col, encode[0], encode[1]])[encode[1]]
+                    .agg(["count"])
+                    .reset_index()
+                    .rename(columns={"count": encode[3]})
+                )
 
-    logger.info("Following columns were label encoded")
-    logger.info(", ".join(converted_cols))
+                temp_dict.sort_values(by=[col, encode[0], encode[3]], inplace=True)
+                temp_dict = temp_dict.drop_duplicates(
+                    subset=[col, encode[0]], keep="last"
+                )
+                temp_dict[new_col] = (
+                    temp_dict[col].astype(str) + "_" + temp_dict[encode[0]].astype(str)
+                )
+                temp_dict.index = temp_dict[new_col].values
+                temp_dict = temp_dict[encode[1]].to_dict()
+                df[new_col] = df[encode[1]] - df[new_col].map(temp_dict)
+
+    logger.info("Built card usages")
 
 
 def build_processed_dataset(ds):
@@ -653,19 +781,18 @@ def build_processed_dataset(ds):
 
     ########################### TRANSACTIONS
 
+    build_uid(ds)
+    build_date_features(ds)
+
     transform_amount(ds)  # down from 0.9182 to 0.9167
     transform_productCD(ds)
     transform_emails_and_domains(ds)
     encode_M_variables(ds)
+    clean_D_variables(ds)
+    clean_C_variables(ds)
 
     ########################### AGGREGATING
 
-    build_uid(ds)
-    build_date_features(ds)
-
-    aggregate(ds)
+    aggregate_uids(ds)
     build_interaction_features(ds)
-
-    ########################### ENCODING
-
-    label_encoding(ds)
+    build_usage(ds)
