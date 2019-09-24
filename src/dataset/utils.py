@@ -14,6 +14,13 @@ def df_empty(columns, dtypes, index=None):
     return df
 
 
+def negative_downsampling(X, frac):
+    t_ = pd.concat(
+        [X[X["isFraud"] == 1], X[X["isFraud"] == 0].sample(frac=frac, random_state=0)]
+    ).sample(frac=1, random_state=0)
+    return t_
+
+
 def get_all_dataframe(ds):
     """
     Return X_train and X_test concatenated

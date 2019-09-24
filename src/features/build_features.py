@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
-from src.features.utils import num_after_point
+from src.features.utils import compute_polar_coords, num_after_point
 
 logger = logging.getLogger(__name__)
 
@@ -443,14 +443,6 @@ def clean_D_variables(ds):
             ) ** 0.5
             df["D8"] = df["D8"].fillna(-1).astype(int)
 
-    i_cols.remove("D1")
-    i_cols.remove("D2")
-    i_cols.remove("D9")
-    periods = ["DT_D", "DT_W", "DT_M"]
-
-    # for df in [ds.X_train, ds.X_test]:
-    #    df = values_normalization(df, periods, i_cols)
-
     for col in ["D1", "D2"]:
         for df in [ds.X_train, ds.X_test]:
             df[col + "_scaled"] = df[col] / ds.X_train[col].max()
@@ -468,7 +460,26 @@ def clean_C_variables(ds):
             ].max()
             df[col] = df[col].clip(None, max_value)
 
+        # df["C1<2100"] = df.eval('C1 < 2100').astype(int)
+        # df["C1_between"] = df.eval('2100 < C1 < 3000').astype(int)
+        # df["C1>3000"] = df.eval('C1 > 3000').astype(int)
+
+        # all frauds on C3 are < 1
+        df["C3"] = df.eval("C3 > 1").astype(int)
+
     logger.info("Clean C variables")
+
+
+def bivariate_feature_engineering(ds):
+    return
+    for df in [ds.X_train, ds.X_test]:
+        df["C1-C4"] = df.eval("C1 - C4")
+        df["C5-C9"] = df.eval("C5 - C9")
+
+        # frauds look close to 0 on C5-C9 plot
+        df["C5_C9_dist"], df["C5_C9_angle"] = compute_polar_coords(df, "C9", "C5")
+
+        df["D1_eq_D2"] = (df["D1"] == df["D2"]).astype(int)
 
 
 def build_uid(ds):
@@ -691,18 +702,17 @@ def build_interaction_features(ds):
         "card5__P_emaildomain",
         "addr1__card1",
     ]
-    my_intersections = ["C11__C13"]
-    for feature in random_intersection + my_intersections:
+    for feature in random_intersection:
         f1, f2 = feature.split("__")
         ds.X_train[feature] = (
             ds.X_train[f1].astype(str) + "_" + ds.X_train[f2].astype(str)
         )
         ds.X_test[feature] = ds.X_test[f1].astype(str) + "_" + ds.X_test[f2].astype(str)
 
-    ds.add_categorical_cols(random_intersection + my_intersections)
+    ds.add_categorical_cols(random_intersection)
 
     logger.info("Following columns were created for interaction")
-    logger.info(", ".join(random_intersection + my_intersections))
+    logger.info(", ".join(random_intersection))
 
 
 def build_usage(ds):
@@ -790,6 +800,8 @@ def build_processed_dataset(ds):
     encode_M_variables(ds)
     clean_D_variables(ds)
     clean_C_variables(ds)
+
+    bivariate_feature_engineering(ds)
 
     ########################### AGGREGATING
 

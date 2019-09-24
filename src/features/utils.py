@@ -35,3 +35,10 @@ def cross_count(X, col1, col2):
         pd.crosstab(X[col1], X[col2]).stack().reset_index().rename(columns={0: "value"})
     )
     return stacked
+
+
+def compute_polar_coords(X, col_X, col_Y):
+    return (
+        np.sqrt(X.eval(f"{col_X}*{col_X} + {col_Y}*{col_Y}")),
+        np.arctan((X[col_X] + 1e-9) / (X[col_Y] + 1e-9)),
+    )

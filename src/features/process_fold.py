@@ -200,15 +200,16 @@ def frequency_encoding(fold):
                 fold.X_test[new_column] / fold.X_test[period + "_total"]
             )
 
-            fold.X_train[f"{new_column}_proportions"] = (
-                fold.X_train[period + "_total"] / fold.X_train[period + "_total"]
-            )
-            fold.X_valid[f"{new_column}_proportions"] = (
-                fold.X_valid[period + "_total"] / fold.X_valid[period + "_total"]
-            )
-            fold.X_test[f"{new_column}_proportions"] = (
-                fold.X_test[period + "_total"] / fold.X_test[period + "_total"]
-            )
+            # Boruta destroyed those so removed for now
+            # fold.X_train[f"{new_column}_proportions"] = (
+            #    fold.X_train[period + "_total"] / fold.X_train[period + "_total"]
+            # )
+            # fold.X_valid[f"{new_column}_proportions"] = (
+            #    fold.X_valid[period + "_total"] / fold.X_valid[period + "_total"]
+            # )
+            # fold.X_test[f"{new_column}_proportions"] = (
+            #    fold.X_test[period + "_total"] / fold.X_test[period + "_total"]
+            # )
 
     logger.info("Following columns were frequency encoded")
     logger.info(", ".join(i_cols))
