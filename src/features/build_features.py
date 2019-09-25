@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
+from sklearn.preprocessing import LabelEncoder
 from src.features.utils import compute_polar_coords, num_after_point
 
 logger = logging.getLogger(__name__)
@@ -771,6 +772,35 @@ def build_usage(ds):
     logger.info("Built card usages")
 
 
+def label_encoding(ds):
+    """
+    Apply label encoder to ds.X_train and ds.X_test categorical columns, while preserving nan values
+
+    input: a Dataset
+    output: (train, test)
+    """
+    converted_cols = []
+    nan_constant = -999
+
+    for col in ds.categorical_cols:
+        ds.X_train[col] = ds.X_train[col].fillna(nan_constant)
+        ds.X_test[col] = ds.X_test[col].fillna(nan_constant)
+
+        lbl = LabelEncoder()
+        lbl.fit(list(set(list(ds.X_train[col].values) + list(ds.X_test[col].values))))
+        ds.X_train[col] = lbl.transform(list(ds.X_train[col].values))
+        ds.X_test[col] = lbl.transform(list(ds.X_test[col].values))
+
+        if nan_constant in lbl.classes_:
+            nan_transformed = lbl.transform([nan_constant])[0]
+            ds.X_train.loc[ds.X_train[col] == nan_transformed, col] = np.nan
+            ds.X_test.loc[ds.X_test[col] == nan_transformed, col] = np.nan
+        converted_cols.append(col)
+
+    logger.info("Following columns were label encoded")
+    logger.info(", ".join(converted_cols))
+
+
 def build_processed_dataset(ds):
     clean_inf_nan(ds)  # 0.910084 - baseline
 
@@ -808,3 +838,5 @@ def build_processed_dataset(ds):
     aggregate_uids(ds)
     build_interaction_features(ds)
     build_usage(ds)
+
+    label_encoding(ds)

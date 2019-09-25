@@ -127,6 +127,29 @@
     "save_predictions": true,
     "splits": "holdout"
   },
+  "lgb_kfold_test": {
+    "classifier": "lgb",
+    "params": {
+      "n_estimators": 5000,
+      "early_stopping_rounds": 70,
+      "num_leaves": 256,
+      "learning_rate": 0.03,
+      "max_depth": 9,
+      "objective": "binary",
+      "metric": "auc",
+      "categorical_feature": [],
+      "subsample": 0.9,
+      "colsample_bytree": 0.9,
+      "scale_pos_weight": 5.5,
+      "boosting_type": "gbdt",
+      "seed": 1337,
+      "n_jobs": -1,
+      "verbosity": -1
+    },
+    "save_models": false,
+    "save_predictions": false,
+    "splits": "kfold"
+  },
   "lgb_kfold": {
     "classifier": "lgb",
     "params": {

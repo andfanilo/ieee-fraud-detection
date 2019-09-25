@@ -69,7 +69,7 @@ def run_experiment(version, key):
     ]
     splits = {
         "holdout": CustomDateSplitter(ds.X_train["TransactionDT"], date_ranges),
-        "kfold": KFold(n_splits=6, shuffle=False),
+        "kfold": KFold(n_splits=6, random_state=0, shuffle=False),
     }
     folds = splits[split]
 

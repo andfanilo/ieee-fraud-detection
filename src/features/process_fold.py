@@ -3,7 +3,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
 from src.features.vesta_transformer import VestaTransformer
 
 logger = logging.getLogger(__name__)
@@ -215,42 +214,6 @@ def frequency_encoding(fold):
     logger.info(", ".join(i_cols))
 
 
-def label_encoding(fold):
-    """
-    Apply label encoder to fold.X_train and fold.X_test categorical columns, while preserving nan values
-
-    input: a Dataset
-    output: (train, test)
-    """
-    converted_cols = []
-    nan_constant = -999
-
-    for col in fold.categorical_cols:
-        fold.X_train[col] = fold.X_train[col].fillna(nan_constant)
-        fold.X_valid[col] = fold.X_valid[col].fillna(nan_constant)
-        fold.X_test[col] = fold.X_test[col].fillna(nan_constant)
-
-        lbl = LabelEncoder()
-        lbl.fit(
-            list(fold.X_train[col].values)
-            + list(fold.X_valid[col].values)
-            + list(fold.X_test[col].values)
-        )
-        fold.X_train[col] = lbl.transform(list(fold.X_train[col].values))
-        fold.X_valid[col] = lbl.transform(list(fold.X_valid[col].values))
-        fold.X_test[col] = lbl.transform(list(fold.X_test[col].values))
-
-        if nan_constant in lbl.classes_:
-            nan_transformed = lbl.transform([nan_constant])[0]
-            fold.X_train.loc[fold.X_train[col] == nan_transformed, col] = np.nan
-            fold.X_valid.loc[fold.X_valid[col] == nan_transformed, col] = np.nan
-            fold.X_test.loc[fold.X_test[col] == nan_transformed, col] = np.nan
-        converted_cols.append(col)
-
-    logger.info("Following columns were label encoded")
-    logger.info(", ".join(converted_cols))
-
-
 ########################### DROPPING
 
 
@@ -360,8 +323,6 @@ def drop_cols_manual(fold):
 
 
 def process_fold(fold):
-    label_encoding(fold)
-
     ########################### TRANSFORMING
     impute_values(fold)
     reduce_V_features(fold)
