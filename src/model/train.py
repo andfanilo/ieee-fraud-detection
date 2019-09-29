@@ -31,8 +31,8 @@ def clf_logistic(X_train, y_train, X_valid, y_valid, X_test, params):
 
 
 def clf_xgb(X_train, y_train, X_valid, y_valid, X_test, params):
-    n_estimators = params.pop("n_estimators")
-    early_stopping_rounds = params.pop("early_stopping_rounds")
+    n_estimators = params["n_estimators"]
+    early_stopping_rounds = params["early_stopping_rounds"]
     params.pop("categorical_feature")
 
     columns = X_train.columns

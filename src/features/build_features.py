@@ -425,7 +425,7 @@ def encode_M_variables(ds):
 
 def clean_D_variables(ds):
     i_cols = ["D" + str(i) for i in range(1, 16)]
-    uids = ["uid", "uid2", "uid3", "uid4", "uid5", "bank_type"]
+    uids = ["uid", "uid2", "uid3", "uid4", "uid5", "uid6", "bank_type"]
     aggregations = ["mean", "std"]
 
     for df in [ds.X_train, ds.X_test]:
@@ -455,11 +455,11 @@ def clean_C_variables(ds):
     i_cols = ["C" + str(i) for i in range(1, 15)]
 
     for df in [ds.X_train, ds.X_test]:
-        for col in i_cols:
-            max_value = ds.X_train[ds.X_train["DT_M"] == ds.X_train["DT_M"].max()][
-                col
-            ].max()
-            df[col] = df[col].clip(None, max_value)
+        # for col in i_cols:
+        #    max_value = ds.X_train[ds.X_train["DT_M"] == ds.X_train["DT_M"].max()][
+        #        col
+        #    ].max()
+        #    df[col] = df[col].clip(None, max_value)
 
         # df["C1<2100"] = df.eval('C1 < 2100').astype(int)
         # df["C1_between"] = df.eval('2100 < C1 < 3000').astype(int)
@@ -504,6 +504,43 @@ def build_uid(ds):
         )
         df["uid4"] = df["uid3"].astype(str) + "_" + df["P_emaildomain"].astype(str)
         df["uid5"] = df["uid3"].astype(str) + "_" + df["R_emaildomain"].astype(str)
+        df["uid6"] = (
+            df["card1"].astype(str)
+            + "_"
+            + df["card2"].astype(str)
+            + "_"
+            + df["card3"].astype(str)
+            + "_"
+            + df["card4"].astype(str)
+            + "_"
+            + df["card5"].astype(str)
+            + "_"
+            + df["card6"].astype(str)
+            + "_"
+            + df["addr1"].astype(str)
+            + "_"
+            + df["C1"].astype(str)
+            + "_"
+            + df["C2"].astype(str)
+            + "_"
+            + df["C3"].astype(str)
+            + "_"
+            + df["C4"].astype(str)
+            + "_"
+            + df["C5"].astype(str)
+            + "_"
+            + df["C6"].astype(str)
+            + "_"
+            + df["C7"].astype(str)
+            + "_"
+            + df["C8"].astype(str)
+            + "_"
+            + df["C9"].astype(str)
+            + "_"
+            + df["C10"].astype(str)
+            + "_"
+            + df["C11"].astype(str)
+        )
         df["bank_type"] = df["card3"].astype(str) + "_" + df["card5"].astype(str)
 
     logger.info("UUIDs and bank_type were built")
@@ -645,10 +682,12 @@ def aggregate_uids(ds):
         "uid3",
         "uid4",
         "uid5",
+        "uid6",
         "bank_type",
         "addr1",
     ]
 
+    # TODO : timeblock that in the future
     for aggregated_col in agg_cols:
         for col in i_cols:
             for agg_type in ["mean", "std"]:

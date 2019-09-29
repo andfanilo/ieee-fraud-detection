@@ -117,6 +117,17 @@ def frequency_encoding(fold):
         "addr2",
         "dist1",
         "dist2",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
         "ProductCD",
         "product_type",
         "P_emaildomain",
@@ -134,6 +145,7 @@ def frequency_encoding(fold):
         "uid3",
         "uid4",
         "uid5",
+        "uid6",
         "bank_type",
     ]
 
@@ -164,7 +176,21 @@ def frequency_encoding(fold):
         "local_time_W",
         "local_time_D",
     ]:
-        for col in ["uid", "uid2", "uid3", "uid4", "uid5", "bank_type", "product_type"]:
+        for col in [
+            "uid",
+            "uid2",
+            "uid3",
+            "uid4",
+            "uid5",
+            "uid6",
+            "C4",
+            "C7",
+            "C8",
+            "C10",
+            "C12",
+            "bank_type",
+            "product_type",
+        ]:
             new_column = col + "_" + period
 
             temp_df = pd.concat(
@@ -224,6 +250,7 @@ def drop_user_generated_cols(fold):
         "uid3",
         "uid4",
         "uid5",
+        "uid6",
         "bank_type",
         "DT",
         "DT_M",
